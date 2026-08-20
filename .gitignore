@@ -1,0 +1,39 @@
+# Dependencies and build output (workspace-wide safety net; apps/* also have their own)
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/build/
+
+# Environment secrets - never commit real .env files, only .env.example templates
+.env
+.env.*
+!.env.example
+
+# Python virtual environment
+.venv/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test artifacts
+**/test-results/
+**/playwright-report/
+**/coverage/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Loose debug/scratch scripts and captured credentials that should never be committed
+cookie.txt
+cookies.txt
+login.json
+login.out
+scratch-request-check.js
+tmp-audit-*.js
+debug-*.mjs
+backup-before-module03.sql

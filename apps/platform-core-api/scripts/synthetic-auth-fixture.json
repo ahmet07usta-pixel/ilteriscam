@@ -1,0 +1,14 @@
+{
+  "admin": {
+    "email": "synthetic-admin@localhost",
+    "password": "Admin123"
+  },
+  "userA": {
+    "email": "synthetic-user-a@localhost",
+    "password": "Buyer123"
+  },
+  "userB": {
+    "email": "synthetic-user-b@localhost",
+    "password": "Buyer456"
+  }
+}

@@ -1,0 +1,143 @@
+const runtimeApiBaseUrl = typeof window !== 'undefined'
+  ? `${window.location.protocol}//${window.location.hostname}:4100/api/v1`
+  : 'http://127.0.0.1:4100/api/v1'
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? runtimeApiBaseUrl).replace(/\/$/, '')
+
+export const AUTH_EXPIRED_EVENT = 'dijitalcam:auth-expired'
+
+export class ApiError extends Error {
+  readonly status: number
+  readonly details?: unknown
+
+  constructor(
+    status: number,
+    message: string,
+    details?: unknown,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.details = details
+  }
+}
+
+interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
+  body?: unknown
+  skipAuthRefresh?: boolean
+}
+
+interface RefreshResponse {
+  accessToken: string
+  user: unknown
+}
+
+let accessToken: string | null = null
+let refreshPromise: Promise<RefreshResponse> | null = null
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token
+}
+
+export function getAccessToken(): string | null {
+  return accessToken
+}
+
+export function resolveApiCapabilityUrl(url: string): string {
+  return new URL(url, `${API_BASE_URL}/`).toString()
+}
+
+function notifyAuthExpired(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+  }
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  const contentType = response.headers.get('content-type') ?? ''
+  if (contentType.includes('application/json')) {
+    return response.json() as Promise<T>
+  }
+
+  return response.text() as Promise<T>
+}
+
+async function toApiError(response: Response): Promise<ApiError> {
+  let details: unknown
+  try {
+    details = await parseResponse<unknown>(response)
+  } catch {
+    details = undefined
+  }
+
+  const serverMessage = details && typeof details === 'object' && 'message' in details
+    ? String((details as { message: unknown }).message)
+    : undefined
+
+  return new ApiError(response.status, serverMessage ?? `API istegi basarisiz (${response.status})`, details)
+}
+
+async function requestRefresh(): Promise<RefreshResponse> {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw await toApiError(response)
+        }
+
+        const result = await parseResponse<RefreshResponse>(response)
+        setAccessToken(result.accessToken)
+        return result
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+
+  return refreshPromise
+}
+
+export async function refreshAccessToken(): Promise<RefreshResponse> {
+  return requestRefresh()
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { body, headers, skipAuthRefresh = false, ...requestInit } = options
+
+  const execute = () => fetch(`${API_BASE_URL}${path}`, {
+    ...requestInit,
+    credentials: 'include',
+    headers: {
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...headers,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+
+  let response = await execute()
+  if (response.status === 401 && !skipAuthRefresh) {
+    try {
+      await requestRefresh()
+      response = await execute()
+    } catch (error) {
+      setAccessToken(null)
+      notifyAuthExpired()
+      throw error
+    }
+  }
+
+  if (!response.ok) {
+    throw await toApiError(response)
+  }
+
+  return parseResponse<T>(response)
+}

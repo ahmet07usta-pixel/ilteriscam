@@ -1,0 +1,813 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES
+  PRODUCER
+  USER
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum InviteStatus {
+  NOT_PREPARED
+  PREPARED
+  SENT
+  ACCEPTED
+}
+
+enum CompanyType {
+  GLASS_PRODUCER
+  ALUMINUM
+  PVC
+  BALCONY
+  FURNITURE
+  OTHER
+}
+
+enum CompanyVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum RegionType {
+  COUNTRY
+  CITY
+  DISTRICT
+  ZONE
+}
+
+enum RegionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CompanyMembershipStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RequestStatus {
+  DRAFT
+  OPEN_FOR_QUOTATION
+  QUOTED
+  AWARDED
+  CANCELLED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum OrderStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  CANCELLED
+}
+
+enum ProductionStatus {
+  PLANNED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum ShipmentStatus {
+  PLANNED
+  IN_TRANSIT
+  DELIVERED
+}
+
+enum MeasurementUnit {
+  MM
+  CM
+  M
+  M2
+  M3
+  PIECE
+}
+
+enum MeasurementSource {
+  USER
+  AI
+  AI_CORRECTED
+  MANUAL_CORRECTION
+}
+
+enum MeasurementStatus {
+  PENDING
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum GeometryType {
+  COUNT
+  LINE
+  RECTANGLE
+  VOLUME
+  CUSTOM
+}
+
+enum AttachmentStatus {
+  PENDING_UPLOAD
+  AVAILABLE
+  QUARANTINED
+  DELETED
+}
+
+enum AnalysisTaskType {
+  MEASUREMENT_EXTRACTION
+}
+
+enum AnalysisJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AnalysisReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CORRECTED
+}
+
+enum MeasurementReviewAction {
+  APPROVE
+  REJECT
+  CORRECT
+}
+
+enum PriceCatalogStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PriceAdjustmentType {
+  RATE
+  FIXED_AMOUNT
+}
+
+enum CalculationStatus {
+  GENERATED
+  FINALIZED
+  SUPERSEDED
+}
+
+model User {
+  id                       String                  @id @default(cuid())
+  email                    String                  @unique
+  phone                    String?                 @unique
+  passwordHash             String
+  fullName                 String
+  role                     Role                    @default(USER)
+  permissions              Json?
+  refreshTokenHash         String?
+  isActive                 Boolean                 @default(true)
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  audits                   AuditLog[]
+  memberships              CompanyUserMembership[]
+  requests                 Request[]
+  quotations               Quotation[]
+  orders                   Order[]                 @relation("OrderCreatedBy")
+  confirmedOrders          Order[]                 @relation("OrderConfirmedBy")
+  cancelledOrders          Order[]                 @relation("OrderCancelledBy")
+  createdRequestItems      RequestItem[]           @relation("RequestItemCreatedBy")
+  updatedRequestItems      RequestItem[]           @relation("RequestItemUpdatedBy")
+  uploadedAttachments      Attachment[]            @relation("AttachmentUploadedBy")
+  reviewedAnalysisResults  AnalysisResult[]        @relation("AnalysisResultReviewedBy")
+  measurementReviews       MeasurementReview[]     @relation("MeasurementReviewedBy")
+  createdShipments         Shipment[]              @relation("ShipmentCreatedBy")
+  createdPriceCatalogItems PriceCatalogItem[]      @relation("PriceCatalogItemCreatedBy")
+  createdCalculations      QuotationCalculation[]  @relation("CalculationCreatedBy")
+  createdProductions       Production[]            @relation("ProductionCreatedBy")
+  notifications            Notification[]
+}
+
+model Company {
+  id                     String                    @id @default(cuid())
+  legalName              String
+  tradeName              String?
+  companyType            CompanyType               @default(OTHER)
+  regionId               String?
+  region                 Region?                   @relation(fields: [regionId], references: [id])
+  contactEmail           String?
+  contactPhone           String?
+  taxNumber              String?
+  verificationStatus     CompanyVerificationStatus @default(PENDING)
+  status                 CompanyStatus             @default(ACTIVE)
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  memberships            CompanyUserMembership[]
+  requests               Request[]                 @relation("RequestBuyerCompany")
+  requestRecipients      RequestRecipient[]
+  buyerQuotations        Quotation[]               @relation("QuotationBuyerCompany")
+  manufacturerQuotations Quotation[]               @relation("QuotationManufacturerCompany")
+  buyerOrders            Order[]                   @relation("OrderBuyerCompany")
+  manufacturerOrders     Order[]                   @relation("OrderManufacturerCompany")
+  productions            Production[]              @relation("ProductionManufacturerCompany")
+  shipments              Shipment[]                @relation("ShipmentManufacturerCompany")
+  priceCatalogItems      PriceCatalogItem[]
+  manufacturerCustomers  ManufacturerCustomer[]
+
+  @@index([regionId])
+  @@index([verificationStatus])
+}
+
+model Region {
+  id                       String                    @id @default(cuid())
+  name                     String
+  parentRegionId           String?
+  parentRegion             Region?                   @relation("RegionHierarchy", fields: [parentRegionId], references: [id])
+  regionType               RegionType                @default(CITY)
+  code                     String?
+  country                  String?
+  city                     String?
+  timezone                 String?
+  status                   RegionStatus              @default(ACTIVE)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  children                 Region[]                  @relation("RegionHierarchy")
+  companies                Company[]
+  requests                 Request[]
+  priceRegionalAdjustments PriceRegionalAdjustment[]
+
+  @@index([parentRegionId])
+  @@index([status])
+}
+
+model CompanyUserMembership {
+  id        String                  @id @default(cuid())
+  companyId String
+  company   Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String                  @default("MEMBER")
+  status    CompanyMembershipStatus @default(ACTIVE)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  @@unique([companyId, userId])
+  @@index([companyId])
+  @@index([userId])
+}
+
+model Request {
+  id                 String                 @id @default(cuid())
+  requestNumber      String                 @unique
+  companyId          String
+  company            Company                @relation("RequestBuyerCompany", fields: [companyId], references: [id], onDelete: Restrict)
+  regionId           String?
+  region             Region?                @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  createdByUserId    String?
+  createdBy          User?                  @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  title              String
+  description        String?
+  productType        String
+  quantity           Decimal?
+  unit               String?
+  targetDeliveryDate DateTime?
+  budgetMin          Decimal?
+  budgetMax          Decimal?
+  currency           String                 @default("TRY")
+  status             RequestStatus          @default(DRAFT)
+  version            Int                    @default(1)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  recipients         RequestRecipient[]
+  quotations         Quotation[]
+  orders             Order[]
+  items              RequestItem[]
+  attachments        Attachment[]
+  analysisJobs       AnalysisJob[]
+  calculations       QuotationCalculation[]
+
+  @@index([companyId, status, createdAt])
+  @@index([regionId])
+}
+
+model RequestRecipient {
+  id        String   @id @default(cuid())
+  requestId String
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@unique([requestId, companyId])
+  @@index([requestId])
+  @@index([companyId])
+}
+
+model Quotation {
+  id                    String                 @id @default(cuid())
+  quotationNumber       String                 @unique
+  requestId             String
+  request               Request                @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  companyId             String
+  company               Company                @relation("QuotationBuyerCompany", fields: [companyId], references: [id], onDelete: Restrict)
+  manufacturerCompanyId String
+  manufacturerCompany   Company                @relation("QuotationManufacturerCompany", fields: [manufacturerCompanyId], references: [id], onDelete: Restrict)
+  createdByUserId       String?
+  createdBy             User?                  @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  totalAmount           Decimal
+  currency              String                 @default("TRY")
+  leadTimeDays          Int
+  validUntil            DateTime
+  notes                 String?
+  status                QuotationStatus        @default(DRAFT)
+  revisionNumber        Int                    @default(1)
+  version               Int                    @default(1)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  order                 Order?
+  activeCalculationId   String?                @unique
+  activeCalculation     QuotationCalculation?  @relation("ActiveQuotationCalculation", fields: [activeCalculationId], references: [id], onDelete: SetNull)
+  calculations          QuotationCalculation[] @relation("QuotationCalculations")
+  items                 QuotationItem[]
+
+  @@unique([requestId, manufacturerCompanyId])
+  @@index([companyId, status, createdAt])
+  @@index([manufacturerCompanyId, status])
+  @@index([requestId])
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  orderNumber           String      @unique
+  requestId             String
+  request               Request     @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  quotationId           String      @unique
+  quotation             Quotation   @relation(fields: [quotationId], references: [id], onDelete: Restrict)
+  companyId             String
+  company               Company     @relation("OrderBuyerCompany", fields: [companyId], references: [id], onDelete: Restrict)
+  manufacturerCompanyId String
+  manufacturerCompany   Company     @relation("OrderManufacturerCompany", fields: [manufacturerCompanyId], references: [id], onDelete: Restrict)
+  createdByUserId       String?
+  createdBy             User?       @relation("OrderCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  status                OrderStatus @default(PENDING_CONFIRMATION)
+  version               Int         @default(1)
+  confirmedAt           DateTime?
+  confirmedByUserId     String?
+  confirmedBy           User?       @relation("OrderConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  cancelledAt           DateTime?
+  cancelledByUserId     String?
+  cancelledBy           User?       @relation("OrderCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  cancellationReason    String?
+  currency              String      @default("TRY")
+  totalAmount           Decimal
+  promisedDeliveryDate  DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  production            Production?
+  shipment              Shipment?
+
+  @@index([companyId, status, createdAt])
+  @@index([manufacturerCompanyId, status])
+  @@index([requestId])
+}
+
+model Production {
+  id                    String           @id @default(cuid())
+  productionNumber      String           @unique
+  orderId               String           @unique
+  order                 Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  manufacturerCompanyId String
+  manufacturerCompany   Company          @relation("ProductionManufacturerCompany", fields: [manufacturerCompanyId], references: [id], onDelete: Restrict)
+  createdByUserId       String?
+  createdBy             User?            @relation("ProductionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  status                ProductionStatus @default(PLANNED)
+  version               Int              @default(1)
+  productionLine        String?
+  plannedStartDate      DateTime?
+  dueDate               DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  notes                 String?
+  statusReason          String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  shipment              Shipment?
+
+  @@index([manufacturerCompanyId, status, dueDate])
+  @@index([status, createdAt])
+}
+
+model Shipment {
+  id                    String         @id @default(cuid())
+  shipmentNumber        String         @unique
+  productionId          String         @unique
+  production            Production     @relation(fields: [productionId], references: [id], onDelete: Restrict)
+  orderId               String         @unique
+  order                 Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  manufacturerCompanyId String
+  manufacturerCompany   Company        @relation("ShipmentManufacturerCompany", fields: [manufacturerCompanyId], references: [id], onDelete: Restrict)
+  createdByUserId       String?
+  createdBy             User?          @relation("ShipmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  status                ShipmentStatus @default(PLANNED)
+  version               Int            @default(1)
+  destinationAddress    String
+  plannedDepartureAt    DateTime
+  estimatedDeliveryAt   DateTime
+  departedAt            DateTime?
+  deliveredAt           DateTime?
+  carrier               String?
+  trackingNumber        String?
+  notes                 String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([manufacturerCompanyId, status, plannedDepartureAt])
+  @@index([status, estimatedDeliveryAt])
+  @@index([status, createdAt])
+}
+
+model RequestItem {
+  id                     String              @id @default(cuid())
+  requestId              String
+  request                Request             @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  lineNumber             Int
+  description            String
+  productType            String
+  productCode            String?
+  quantity               Decimal?            @db.Decimal(18, 6)
+  unit                   MeasurementUnit?
+  measurementSource      MeasurementSource?
+  measurementStatus      MeasurementStatus   @default(PENDING)
+  widthMm                Decimal?            @db.Decimal(18, 6)
+  heightMm               Decimal?            @db.Decimal(18, 6)
+  lengthMm               Decimal?            @db.Decimal(18, 6)
+  depthMm                Decimal?            @db.Decimal(18, 6)
+  thicknessMm            Decimal?            @db.Decimal(18, 6)
+  calculatedAreaM2       Decimal?            @db.Decimal(18, 6)
+  calculatedLengthM      Decimal?            @db.Decimal(18, 6)
+  calculatedVolumeM3     Decimal?            @db.Decimal(18, 6)
+  sourceAnalysisResultId String?
+  sourceAnalysisResult   AnalysisResult?     @relation("RequestItemSourceResult", fields: [sourceAnalysisResultId], references: [id], onDelete: SetNull)
+  createdByUserId        String?
+  createdBy              User?               @relation("RequestItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUserId        String?
+  updatedBy              User?               @relation("RequestItemUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  version                Int                 @default(1)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  attachments            Attachment[]
+  analysisJobs           AnalysisJob[]
+  measurementReviews     MeasurementReview[]
+  quotationItems         QuotationItem[]
+
+  @@unique([requestId, lineNumber])
+  @@index([requestId, measurementStatus])
+  @@index([sourceAnalysisResultId])
+}
+
+model Attachment {
+  id               String           @id @default(cuid())
+  requestId        String
+  request          Request          @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestItemId    String?
+  requestItem      RequestItem?     @relation(fields: [requestItemId], references: [id], onDelete: SetNull)
+  fileName         String
+  mimeType         String
+  storageProvider  String
+  storageKey       String           @unique
+  sizeBytes        BigInt
+  checksum         String
+  uploadedByUserId String?
+  uploadedBy       User?            @relation("AttachmentUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  analysisEligible Boolean          @default(false)
+  status           AttachmentStatus @default(PENDING_UPLOAD)
+  version          Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  analysisJobs     AnalysisJob[]
+
+  @@index([requestId, status, createdAt])
+  @@index([requestItemId])
+  @@index([checksum])
+}
+
+model AnalysisJob {
+  id             String            @id @default(cuid())
+  requestId      String
+  request        Request           @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestItemId  String?
+  requestItem    RequestItem?      @relation(fields: [requestItemId], references: [id], onDelete: SetNull)
+  attachmentId   String
+  attachment     Attachment        @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  taskType       AnalysisTaskType  @default(MEASUREMENT_EXTRACTION)
+  status         AnalysisJobStatus @default(QUEUED)
+  provider       String
+  model          String
+  modelVersion   String
+  idempotencyKey String
+  inputHash      String
+  attemptCount   Int               @default(0)
+  maxAttempts    Int               @default(3)
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  failureCode    String?
+  failureReason  String?
+  version        Int               @default(1)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  results        AnalysisResult[]
+
+  @@unique([requestId, idempotencyKey])
+  @@index([requestId, status, createdAt])
+  @@index([requestItemId])
+  @@index([attachmentId])
+  @@index([status, leaseExpiresAt])
+}
+
+model AnalysisResult {
+  id                   String                @id @default(cuid())
+  analysisJobId        String
+  analysisJob          AnalysisJob           @relation(fields: [analysisJobId], references: [id], onDelete: Cascade)
+  resultVersion        Int                   @default(1)
+  schemaVersion        Int                   @default(1)
+  provider             String
+  model                String
+  modelVersion         String
+  confidence           Decimal?              @db.Decimal(5, 4)
+  warnings             Json?
+  assumptions          Json?
+  rawOutputStorageKey  String?
+  reviewStatus         AnalysisReviewStatus  @default(PENDING)
+  reviewedByUserId     String?
+  reviewedBy           User?                 @relation("AnalysisResultReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedAt           DateTime?
+  reviewReason         String?
+  version              Int                   @default(1)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  detectedMeasurements DetectedMeasurement[]
+  measurementReviews   MeasurementReview[]
+  sourcedRequestItems  RequestItem[]         @relation("RequestItemSourceResult")
+
+  @@unique([analysisJobId, resultVersion])
+  @@index([reviewStatus, createdAt])
+}
+
+model DetectedMeasurement {
+  id                 String              @id @default(cuid())
+  analysisResultId   String
+  analysisResult     AnalysisResult      @relation(fields: [analysisResultId], references: [id], onDelete: Cascade)
+  ordinal            Int
+  label              String?
+  geometryType       GeometryType
+  widthMm            Decimal?            @db.Decimal(18, 6)
+  heightMm           Decimal?            @db.Decimal(18, 6)
+  lengthMm           Decimal?            @db.Decimal(18, 6)
+  depthMm            Decimal?            @db.Decimal(18, 6)
+  thicknessMm        Decimal?            @db.Decimal(18, 6)
+  quantity           Decimal?            @db.Decimal(18, 6)
+  unit               MeasurementUnit?
+  calculatedAreaM2   Decimal?            @db.Decimal(18, 6)
+  calculatedLengthM  Decimal?            @db.Decimal(18, 6)
+  calculatedVolumeM3 Decimal?            @db.Decimal(18, 6)
+  confidence         Decimal?            @db.Decimal(5, 4)
+  warnings           Json?
+  assumptions        Json?
+  createdAt          DateTime            @default(now())
+  measurementReviews MeasurementReview[]
+
+  @@unique([analysisResultId, ordinal])
+  @@index([analysisResultId, geometryType])
+}
+
+model MeasurementReview {
+  id                    String                  @id @default(cuid())
+  analysisResultId      String
+  analysisResult        AnalysisResult          @relation(fields: [analysisResultId], references: [id], onDelete: Restrict)
+  detectedMeasurementId String?
+  detectedMeasurement   DetectedMeasurement?    @relation(fields: [detectedMeasurementId], references: [id], onDelete: SetNull)
+  requestItemId         String
+  requestItem           RequestItem             @relation(fields: [requestItemId], references: [id], onDelete: Restrict)
+  action                MeasurementReviewAction
+  reviewedByUserId      String?
+  reviewedBy            User?                   @relation("MeasurementReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  correctedQuantity     Decimal?                @db.Decimal(18, 6)
+  correctedUnit         MeasurementUnit?
+  correctedWidthMm      Decimal?                @db.Decimal(18, 6)
+  correctedHeightMm     Decimal?                @db.Decimal(18, 6)
+  correctedLengthMm     Decimal?                @db.Decimal(18, 6)
+  correctedDepthMm      Decimal?                @db.Decimal(18, 6)
+  correctedThicknessMm  Decimal?                @db.Decimal(18, 6)
+  correctedAreaM2       Decimal?                @db.Decimal(18, 6)
+  correctedLengthM      Decimal?                @db.Decimal(18, 6)
+  correctedVolumeM3     Decimal?                @db.Decimal(18, 6)
+  reason                String?
+  resultVersion         Int
+  createdAt             DateTime                @default(now())
+
+  @@unique([analysisResultId, requestItemId])
+  @@index([requestItemId, createdAt])
+  @@index([detectedMeasurementId])
+}
+
+model PriceCatalogItem {
+  id                  String                    @id @default(cuid())
+  companyId           String
+  company             Company                   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  productCode         String
+  productType         String
+  description         String?
+  baseUnit            MeasurementUnit
+  unitPrice           Decimal                   @db.Decimal(18, 6)
+  currency            String                    @default("TRY")
+  minimumOrderAmount  Decimal?                  @db.Decimal(18, 2)
+  defaultWasteRate    Decimal                   @default(0) @db.Decimal(9, 6)
+  defaultDiscountRate Decimal                   @default(0) @db.Decimal(9, 6)
+  optionConfig        Json?
+  status              PriceCatalogStatus        @default(ACTIVE)
+  version             Int                       @default(1)
+  validFrom           DateTime?
+  validUntil          DateTime?
+  createdByUserId     String?
+  createdBy           User?                     @relation("PriceCatalogItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  regionalAdjustments PriceRegionalAdjustment[]
+  quotationItems      QuotationItem[]
+
+  @@unique([companyId, productCode, version])
+  @@index([companyId, status, validFrom])
+}
+
+model PriceRegionalAdjustment {
+  id                 String              @id @default(cuid())
+  priceCatalogItemId String
+  priceCatalogItem   PriceCatalogItem    @relation(fields: [priceCatalogItemId], references: [id], onDelete: Cascade)
+  regionId           String
+  region             Region              @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  adjustmentType     PriceAdjustmentType @default(RATE)
+  adjustmentValue    Decimal             @db.Decimal(18, 6)
+  currency           String?
+  version            Int                 @default(1)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@unique([priceCatalogItemId, regionId])
+  @@index([regionId])
+}
+
+model QuotationCalculation {
+  id                       String            @id @default(cuid())
+  quotationId              String
+  quotation                Quotation         @relation("QuotationCalculations", fields: [quotationId], references: [id], onDelete: Cascade)
+  requestId                String
+  request                  Request           @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  quotationRevisionNumber  Int
+  calculationVersion       Int               @default(1)
+  engineVersion            String
+  inputHash                String
+  currency                 String
+  subtotalAmount           Decimal           @db.Decimal(18, 2)
+  wasteAmount              Decimal           @default(0) @db.Decimal(18, 2)
+  regionalAdjustmentAmount Decimal           @default(0) @db.Decimal(18, 2)
+  discountAmount           Decimal           @default(0) @db.Decimal(18, 2)
+  taxAmount                Decimal           @default(0) @db.Decimal(18, 2)
+  totalAmount              Decimal           @db.Decimal(18, 2)
+  snapshotSchemaVersion    Int               @default(1)
+  snapshotPayload          Json
+  snapshotHash             String            @unique
+  status                   CalculationStatus @default(GENERATED)
+  createdByUserId          String?
+  createdBy                User?             @relation("CalculationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  finalizedAt              DateTime?
+  createdAt                DateTime          @default(now())
+  items                    QuotationItem[]
+  activeForQuotation       Quotation?        @relation("ActiveQuotationCalculation")
+
+  @@unique([quotationId, quotationRevisionNumber, calculationVersion])
+  @@unique([quotationId, quotationRevisionNumber, inputHash])
+  @@index([requestId, createdAt])
+  @@index([quotationId, status])
+}
+
+model QuotationItem {
+  id                       String               @id @default(cuid())
+  quotationId              String
+  quotation                Quotation            @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  quotationCalculationId   String
+  quotationCalculation     QuotationCalculation @relation(fields: [quotationCalculationId], references: [id], onDelete: Cascade)
+  requestItemId            String?
+  requestItem              RequestItem?         @relation(fields: [requestItemId], references: [id], onDelete: SetNull)
+  priceCatalogItemId       String?
+  priceCatalogItem         PriceCatalogItem?    @relation(fields: [priceCatalogItemId], references: [id], onDelete: SetNull)
+  lineNumber               Int
+  description              String
+  quantity                 Decimal              @db.Decimal(18, 6)
+  unit                     MeasurementUnit
+  unitPrice                Decimal              @db.Decimal(18, 6)
+  wasteRate                Decimal              @default(0) @db.Decimal(9, 6)
+  wasteQuantity            Decimal              @default(0) @db.Decimal(18, 6)
+  regionalAdjustmentRate   Decimal              @default(0) @db.Decimal(9, 6)
+  regionalAdjustmentAmount Decimal              @default(0) @db.Decimal(18, 2)
+  discountRate             Decimal              @default(0) @db.Decimal(9, 6)
+  discountAmount           Decimal              @default(0) @db.Decimal(18, 2)
+  taxRate                  Decimal              @default(0) @db.Decimal(9, 6)
+  taxAmount                Decimal              @default(0) @db.Decimal(18, 2)
+  subtotalAmount           Decimal              @db.Decimal(18, 2)
+  totalAmount              Decimal              @db.Decimal(18, 2)
+  currency                 String
+  createdAt                DateTime             @default(now())
+
+  @@unique([quotationCalculationId, lineNumber])
+  @@index([quotationId, lineNumber])
+  @@index([requestItemId])
+  @@index([priceCatalogItemId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([resource])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String?
+  payload   Json?
+  status    NotificationStatus @default(PENDING)
+  readAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ManufacturerCustomer {
+  id                    String        @id @default(cuid())
+  code                  String        @unique
+  manufacturerCompanyId String
+  manufacturerCompany   Company       @relation(fields: [manufacturerCompanyId], references: [id], onDelete: Cascade)
+  companyName           String
+  contactName           String
+  phone                 String
+  email                 String
+  taxOffice             String
+  taxNo                 String
+  address               String
+  city                  String
+  region                String
+  description           String
+  status                CompanyStatus @default(ACTIVE)
+  inviteStatus          InviteStatus  @default(NOT_PREPARED)
+  inviteToken           String?
+  invitePreparedAt      DateTime?
+  invitePreparedBy      String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([manufacturerCompanyId])
+  @@index([companyName])
+  @@index([inviteStatus])
+}
