@@ -56,14 +56,24 @@ export class QuotationCalculationsService {
         const generatedAt = new Date();
         const lineSnapshots = [];
         for (const requestItem of requestItems) {
-          const selection = await this.pricingService.selectCatalog(
-            quotation.manufacturerCompanyId,
-            quotation.request.regionId,
-            quotation.currency,
-            requestItem,
-            generatedAt,
-            transaction,
-          );
+          let selection: Awaited<ReturnType<PricingService['selectCatalog']>>;
+          try {
+            selection = await this.pricingService.selectCatalog(
+              quotation.manufacturerCompanyId,
+              quotation.request.regionId,
+              quotation.currency,
+              requestItem,
+              generatedAt,
+              transaction,
+            );
+          } catch (error) {
+            if (error instanceof BadRequestException) {
+              throw new BadRequestException(
+                `Kalem ${requestItem.lineNumber} (${requestItem.description}): ${error.message}`,
+              );
+            }
+            throw error;
+          }
           const line = calculatePricingLine({
             measurement: requestItem,
             baseUnit: selection.catalog.baseUnit,

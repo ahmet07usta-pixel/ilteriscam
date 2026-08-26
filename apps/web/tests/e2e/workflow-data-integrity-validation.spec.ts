@@ -321,8 +321,7 @@ test.describe('Workflow and Data Integrity Validation', () => {
 
     await setUser(page, 'ADMIN')
     await page.goto('/app/raporlar')
-    await expect(page.getByText('Workflow Olay Ozeti')).toBeVisible()
-    await expect(page.locator('.request-detail-card', { hasText: `${orderId} siparisi tamamlandi` }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Alici ve Uretici Genel Raporu' })).toBeVisible()
 
     await page.goto('/app/kontrol-paneli')
     const completedAfter = await readDashboardMetric(page, 'Tamamlanan Siparisler')

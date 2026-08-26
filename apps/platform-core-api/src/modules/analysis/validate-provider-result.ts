@@ -20,6 +20,7 @@ export function validateProviderResult(payload: unknown): AnalysisProviderResult
     measurements: validated.measurements.map((measurement) => ({
       geometryType: measurement.geometryType,
       label: measurement.label ?? undefined,
+      suggestedProductType: measurement.suggestedProductType ?? undefined,
       widthMm: measurement.widthMm ?? undefined,
       heightMm: measurement.heightMm ?? undefined,
       lengthMm: measurement.lengthMm ?? undefined,

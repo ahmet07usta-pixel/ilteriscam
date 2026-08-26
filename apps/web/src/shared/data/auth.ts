@@ -74,6 +74,9 @@ function loginErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 401) {
     return 'Giris bilgileri hatali. Lutfen tekrar deneyin.'
   }
+  if (error instanceof ApiError && error.status === 403) {
+    return error.message || 'Hesabiniz henuz aktif degil. Lutfen yoneticinizle iletisime gecin.'
+  }
   if (error instanceof TypeError) {
     return 'Sunucuya ulasilamadi. Lutfen daha sonra tekrar deneyin.'
   }

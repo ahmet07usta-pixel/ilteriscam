@@ -133,9 +133,10 @@ test('binds Request list, detail, create, submit, and cancel without replacing w
       return
     }
 
-    if (path === '/api/v1/requests/request-db-1' && request.method() === 'GET') {
+    if ((path === '/api/v1/requests/request-db-1' || path === '/api/v1/requests/request-db-2') && request.method() === 'GET') {
       detailCalls += 1
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(requests.find((item) => item.id === 'request-db-1')) })
+      const requestId = path.includes('request-db-1') ? 'request-db-1' : 'request-db-2'
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(requests.find((item) => item.id === requestId)) })
       return
     }
 
@@ -183,6 +184,9 @@ test('binds Request list, detail, create, submit, and cancel without replacing w
     await route.abort()
   })
 
+  // Submitting a request with no items yet prompts a confirmation dialog; accept it for this test.
+  page.on('dialog', (dialog) => void dialog.accept())
+
   await openWithBackendSession(page)
   const initialRow = page.locator('table tbody tr', { hasText: canonicalPrimaryRequestId })
   await expect(initialRow).toBeVisible()
@@ -193,7 +197,7 @@ test('binds Request list, detail, create, submit, and cancel without replacing w
   const detailModal = page.getByRole('region', { name: 'Talep Detayi' })
   await expect(detailModal).toContainText('Backend request detail')
   expect(detailCalls).toBe(1)
-  await detailModal.locator('.request-modal-actions .solid-btn').click()
+  await detailModal.locator('.request-modal-actions').getByRole('button', { name: 'Kapat' }).click()
 
   await page.getByRole('button', { name: '+ Yeni Talep Olustur' }).click()
   const createModal = page.getByRole('region', { name: 'Yeni Talep' })
@@ -203,6 +207,13 @@ test('binds Request list, detail, create, submit, and cancel without replacing w
   await createModal.locator('label:has-text("Sorumlu") input').fill(sessionUser.fullName)
   await createModal.getByLabel('Uretici Firma').selectOption(recipientCompany.id)
   await createModal.locator('.request-modal-actions .solid-btn').click()
+
+  // Requests now stay DRAFT after creation; the detail view opens automatically so the buyer can submit explicitly.
+  const newRequestDetailModal = page.getByRole('region', { name: 'Talep Detayi' })
+  await expect(newRequestDetailModal).toBeVisible()
+  await newRequestDetailModal.getByRole('button', { name: 'Ureticiye Gonder' }).click()
+  await expect(page.getByText('Talep ureticiye gonderildi.')).toBeVisible()
+  await newRequestDetailModal.locator('.request-modal-actions').getByRole('button', { name: 'Kapat' }).click()
 
   const createdRow = page.locator('table tbody tr', { hasText: canonicalSecondaryRequestId })
   await expect(createdRow).toBeVisible()

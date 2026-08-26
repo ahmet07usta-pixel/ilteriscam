@@ -21,6 +21,7 @@ import {
 
 import { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AnalysisService } from '../analysis/analysis.service';
 import { AuditService } from '../audit/audit.service';
 import { PERMISSIONS } from '../rbac/permissions';
 import {
@@ -43,6 +44,7 @@ export class AttachmentsService {
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
     @Inject(STORAGE_PORT) private readonly storage: StoragePort,
+    private readonly analysisService: AnalysisService,
   ) {
     this.maxFileSizeBytes = configService.getOrThrow<number>('storage.maxFileSizeBytes');
   }
@@ -182,6 +184,11 @@ export class AttachmentsService {
       }, transaction);
       return attachment;
     });
+
+    // Best-effort: measurement extraction starts automatically so the uploader never has to trigger it manually.
+    if (this.allowedMimeTypes.has(updated.mimeType)) {
+      await this.analysisService.start(requestId, attachmentId, actor).catch(() => undefined);
+    }
 
     return this.toPublicAttachment(updated);
   }

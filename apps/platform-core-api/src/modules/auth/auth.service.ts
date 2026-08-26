@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CompanyMembershipStatus, CompanyStatus, CompanyVerificationStatus, Prisma, Role, User } from '@prisma/client';
+import { CompanyMembershipStatus, CompanyStatus, CompanyType, CompanyVerificationStatus, Prisma, Role, User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'node:crypto';
@@ -46,6 +46,7 @@ export class AuthService {
     }
 
     this.assertPanelAccess(user.role, metadata.origin);
+    await this.assertCompanyActive(user.id, user.role);
 
     const tokens = await this.issueTokens(user);
     await this.usersService.updateRefreshTokenHash(
@@ -91,7 +92,8 @@ export class AuthService {
           data: {
             legalName: input.companyLegalName.trim(),
             tradeName: input.companyTradeName?.trim() || undefined,
-            companyType: input.companyType,
+            companyType: CompanyType.OTHER,
+            businessDescription: input.businessDescription.trim(),
             taxNumber: input.taxNumber?.trim() || undefined,
             verificationStatus: CompanyVerificationStatus.PENDING,
             status: CompanyStatus.ACTIVE,
@@ -500,6 +502,22 @@ export class AuthService {
     const allowedRoles = trustedOrigin ? panelOriginRoles[trustedOrigin] : undefined;
     if (!allowedRoles?.includes(role)) {
       throw new UnauthorizedException('Account is not permitted for this panel');
+    }
+  }
+
+  // Producer companies created by an admin start INACTIVE until explicitly approved; self-registered buyer companies are always ACTIVE.
+  private async assertCompanyActive(userId: string, role: Role): Promise<void> {
+    if (role === Role.ADMIN || role === Role.MANAGER) {
+      return;
+    }
+
+    const membership = await this.prisma.companyUserMembership.findFirst({
+      where: { userId, status: CompanyMembershipStatus.ACTIVE },
+      include: { company: true },
+    });
+
+    if (membership && membership.company.status === CompanyStatus.INACTIVE) {
+      throw new ForbiddenException('Firma hesabiniz henuz yonetici onayi bekliyor.');
     }
   }
 }

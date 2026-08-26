@@ -14,6 +14,7 @@ export type AnalysisInput = {
 
 export type SuggestedMeasurement = {
   label?: string;
+  suggestedProductType?: string;
   geometryType: GeometryType;
   widthMm?: number;
   heightMm?: number;

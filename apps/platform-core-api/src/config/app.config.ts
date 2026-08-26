@@ -31,7 +31,7 @@ export type StorageConfig = {
 };
 
 export type AiConfig = {
-  provider: 'deterministic' | 'openai';
+  provider: 'deterministic' | 'openai' | 'gemini';
   apiKey?: string;
   model: string;
   requestTimeoutMs: number;
@@ -90,7 +90,7 @@ export const runtimeConfig = (): RuntimeConfig => ({
   ai: {
     provider: (process.env.AI_PROVIDER ?? 'deterministic') as AiConfig['provider'],
     apiKey: process.env.AI_API_KEY,
-    model: process.env.AI_MODEL ?? 'gpt-4.1-mini',
+    model: process.env.AI_MODEL ?? (process.env.AI_PROVIDER === 'gemini' ? 'gemini-3.6-flash' : 'gpt-4.1-mini'),
     requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 30_000),
   },
 });

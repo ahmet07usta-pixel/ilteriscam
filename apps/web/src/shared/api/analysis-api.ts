@@ -35,6 +35,7 @@ function toDetectedMeasurement(response: UnknownRecord): ApiDetectedMeasurement 
     analysisResultId: String(response.analysisResultId),
     ordinal: Number(response.ordinal),
     label: stringOrNull(response.label),
+    suggestedProductType: stringOrNull(response.suggestedProductType),
     geometryType: response.geometryType as GeometryType,
     widthMm: stringOrNull(response.widthMm),
     heightMm: stringOrNull(response.heightMm),

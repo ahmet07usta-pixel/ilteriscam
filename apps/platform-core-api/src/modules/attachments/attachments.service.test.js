@@ -130,13 +130,20 @@ function createHarness(options = {}) {
     },
   };
   const config = { getOrThrow: () => options.maxFileSizeBytes ?? 1024 };
+  const analysis = {
+    startCalls: [],
+    start: async (requestId, attachmentId, actorArg) => {
+      analysis.startCalls.push({ requestId, attachmentId, actor: actorArg });
+    },
+  };
   return {
-    service: new AttachmentsService(prisma, audit, config, storage),
+    service: new AttachmentsService(prisma, audit, config, storage, analysis),
     attachments,
     audit,
     captured,
     storage,
     transaction,
+    analysis,
   };
 }
 

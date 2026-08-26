@@ -81,6 +81,7 @@ export class CompanyFoundationService {
       }
     }
 
+    const initialStatus = input.status ?? CompanyStatus.ACTIVE;
     const company = await this.prisma.company.create({
       data: {
         legalName: input.legalName,
@@ -91,7 +92,8 @@ export class CompanyFoundationService {
         contactPhone: input.contactPhone,
         taxNumber: input.taxNumber,
         verificationStatus: input.verificationStatus ?? CompanyVerificationStatus.PENDING,
-        status: input.status ?? CompanyStatus.ACTIVE,
+        status: initialStatus,
+        activatedAt: initialStatus === CompanyStatus.ACTIVE ? new Date() : null,
       },
     });
 
@@ -137,9 +139,10 @@ export class CompanyFoundationService {
       }
     }
 
+    const activatesNow = input.status === CompanyStatus.ACTIVE && existing.status !== CompanyStatus.ACTIVE;
     const company = await this.prisma.company.update({
       where: { id: companyId },
-      data: input,
+      data: activatesNow ? { ...input, activatedAt: new Date() } : input,
     });
 
     if (actor?.sub) {
@@ -156,7 +159,9 @@ export class CompanyFoundationService {
   }
 
   async listRegions(actor?: AuthenticatedUser): Promise<Region[]> {
-    this.assertAdminOrManager(actor);
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
 
     return this.prisma.region.findMany({
       orderBy: { createdAt: 'desc' },
@@ -165,7 +170,9 @@ export class CompanyFoundationService {
   }
 
   async getRegion(regionId: string, actor?: AuthenticatedUser): Promise<Region> {
-    this.assertAdminOrManager(actor);
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
 
     const region = await this.prisma.region.findUnique({
       where: { id: regionId },

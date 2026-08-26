@@ -74,10 +74,10 @@ class EnvironmentVariables {
   STORAGE_SIGNED_URL_TTL_SECONDS?: number;
 
   @IsOptional()
-  @IsIn(['deterministic', 'openai'])
+  @IsIn(['deterministic', 'openai', 'gemini'])
   AI_PROVIDER?: string;
 
-  @ValidateIf((environment) => environment.AI_PROVIDER === 'openai')
+  @ValidateIf((environment) => environment.AI_PROVIDER === 'openai' || environment.AI_PROVIDER === 'gemini')
   @IsString()
   @IsNotEmpty()
   AI_API_KEY?: string;

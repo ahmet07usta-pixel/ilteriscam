@@ -169,12 +169,11 @@ test.describe('System Performance, Security and Resilience Validation', () => {
 
     const perfRoutes = [
       '/app/kontrol-paneli',
-      '/app/talepler',
-      '/app/teklifler',
-      '/app/siparisler',
-      '/app/uretim-takibi',
-      '/app/sevkiyat',
+      '/app/mesajlar',
+      '/app/bildirimler',
+      '/app/firmalar',
       '/app/raporlar',
+      '/app/ayarlar',
     ]
 
     for (const route of perfRoutes) {
@@ -185,6 +184,8 @@ test.describe('System Performance, Security and Resilience Validation', () => {
       expect(duration).toBeLessThan(4000)
     }
 
+    // Talepler pagination/search-at-scale is not admin-specific; run it as a role that still has the page.
+    await setUser(page, 'MANUFACTURER')
     await page.goto('/app/talepler')
     for (const size of [500, 1000, 5000]) {
       await seedRequests(page, size)
@@ -275,7 +276,7 @@ test.describe('System Performance, Security and Resilience Validation', () => {
     ).length
     expect(duplicateOfferCount).toBe(1)
 
-    await setUser(page, 'ADMIN')
+    await setUser(page, 'MANUFACTURER')
     await page.evaluate(() => {
       const emptySnapshot: WorkflowSnapshot = {
         requests: [],

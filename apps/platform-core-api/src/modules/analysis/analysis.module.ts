@@ -10,6 +10,7 @@ import { ANALYSIS_JOB_QUEUE } from './analysis-job.queue';
 import { AnalysisJobRunner } from './analysis-job.runner';
 import { AnalysisService } from './analysis.service';
 import { DeterministicAnalysisProvider } from './deterministic-analysis.provider';
+import { GeminiAnalysisProvider } from './gemini-analysis.provider';
 import {
   ANALYSIS_HTTP_CLIENT,
   AnalysisHttpClient,
@@ -31,11 +32,12 @@ import {
     {
       provide: ANALYSIS_PROVIDER,
       inject: [ConfigService, ANALYSIS_HTTP_CLIENT],
-      useFactory: (configService: ConfigService, httpClient: AnalysisHttpClient) => (
-        configService.getOrThrow<string>('ai.provider') === 'openai'
-          ? new OpenAiAnalysisProvider(configService, httpClient)
-          : new DeterministicAnalysisProvider()
-      ),
+      useFactory: (configService: ConfigService, httpClient: AnalysisHttpClient) => {
+        const provider = configService.getOrThrow<string>('ai.provider');
+        if (provider === 'openai') return new OpenAiAnalysisProvider(configService, httpClient);
+        if (provider === 'gemini') return new GeminiAnalysisProvider(configService);
+        return new DeterministicAnalysisProvider();
+      },
     },
   ],
   exports: [AnalysisService],

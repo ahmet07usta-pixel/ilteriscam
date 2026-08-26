@@ -79,6 +79,21 @@ test('returns an explicit error when no catalog exists', async () => {
   ), BadRequestException);
 });
 
+test('matches product type regardless of word order or case (AI free-text variance)', async () => {
+  const { service } = serviceWith([catalog({ productCode: null, productType: 'Fume Temperli Cam' })]);
+  const selected = await service.selectCatalog(
+    'manufacturer-1', null, 'TRY', { productCode: null, productType: 'temperli FUME cam' },
+  );
+  assert.equal(selected.catalog.productType, 'Fume Temperli Cam');
+});
+
+test('does not match a genuinely different product type sharing some words', async () => {
+  const { service } = serviceWith([catalog({ productCode: null, productType: 'Temperli Cam' })]);
+  await assert.rejects(service.selectCatalog(
+    'manufacturer-1', null, 'TRY', { productCode: null, productType: 'Temperli Fume Cam' },
+  ), BadRequestException);
+});
+
 test('returns the single regional adjustment and rejects ambiguity', async () => {
   const adjustment = {
     id: 'adjustment-1',

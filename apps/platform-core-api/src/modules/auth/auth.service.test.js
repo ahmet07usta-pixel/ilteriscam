@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 require('ts-node/register/transpile-only');
 
-const { BadRequestException, ConflictException, UnauthorizedException } = require('@nestjs/common');
+const { BadRequestException, ConflictException, ForbiddenException, UnauthorizedException } = require('@nestjs/common');
 const { Prisma, Role } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const { AuthService } = require('./auth.service.ts');
@@ -46,8 +46,9 @@ async function createService() {
   };
   const rbac = { resolvePermissions: () => ['productions.read'] };
   const audit = { record: async (entry) => writes.audits.push(entry) };
+  const prisma = { companyUserMembership: { findFirst: async () => null } };
 
-  return { service: new AuthService(usersService, jwtService, config, rbac, audit), writes };
+  return { service: new AuthService(usersService, jwtService, config, rbac, audit, prisma), writes };
 }
 
 test('allows a staging account to log in only from its assigned panel origin', async () => {
@@ -103,13 +104,28 @@ test('allows trusted local frontend requests when the origin header is absent', 
       'auth.refreshTtl': '7d',
     })[key],
   };
-  const service = new AuthService(usersService, jwtService, config, { resolvePermissions: () => ['productions.read'] }, { record: async (entry) => writes.audits.push(entry) });
+  const service = new AuthService(usersService, jwtService, config, { resolvePermissions: () => ['productions.read'] }, { record: async (entry) => writes.audits.push(entry) }, { companyUserMembership: { findFirst: async () => null } });
 
   const result = await service.login('producer@example.invalid', 'temporary-password', {});
 
   assert.equal(result.accessToken, 'access');
   assert.equal(writes.refreshTokenHashes.length, 1);
   assert.equal(writes.audits.length, 1);
+});
+
+test('blocks login for a user whose company is not yet activated by an admin', async () => {
+  const { service, writes } = await createService();
+  service.prisma = { companyUserMembership: { findFirst: async () => ({ company: { status: 'INACTIVE' } }) } };
+
+  await assert.rejects(
+    service.login('producer@example.invalid', 'temporary-password', {
+      origin: 'https://operations.example.invalid',
+    }),
+    ForbiddenException,
+  );
+
+  assert.equal(writes.refreshTokenHashes.length, 0);
+  assert.equal(writes.audits.length, 0);
 });
 
 test('sanitizes public profile responses and strips sensitive fields', async () => {
@@ -265,7 +281,7 @@ test('register creates a PENDING company, a SALES user, and an OWNER membership,
 
   const result = await service.register({
     companyLegalName: 'Ege Aluminyum Dograma Ltd.',
-    companyType: 'ALUMINUM',
+    businessDescription: 'Aluminyum Dograma Ustasi',
     fullName: 'Kemal Aydin',
     email: 'Kemal@Example.invalid',
     password: 'StrongPass123',
@@ -275,6 +291,8 @@ test('register creates a PENDING company, a SALES user, and an OWNER membership,
   assert.equal(prisma.state.companies.length, 1);
   assert.equal(prisma.state.companies[0].verificationStatus, 'PENDING');
   assert.equal(prisma.state.companies[0].status, 'ACTIVE');
+  assert.equal(prisma.state.companies[0].companyType, 'OTHER');
+  assert.equal(prisma.state.companies[0].businessDescription, 'Aluminyum Dograma Ustasi');
   assert.equal(prisma.state.users[0].role, Role.SALES);
   assert.equal(prisma.state.users[0].email, 'kemal@example.invalid');
   assert.equal(prisma.state.memberships[0].role, 'OWNER');
@@ -293,7 +311,7 @@ test('register rejects weak passwords before creating any records', async () => 
   await assert.rejects(
     service.register({
       companyLegalName: 'Ege Aluminyum Dograma Ltd.',
-      companyType: 'ALUMINUM',
+      businessDescription: 'Aluminyum Dograma Ustasi',
       fullName: 'Kemal Aydin',
       email: 'kemal@example.invalid',
       password: 'weak',
@@ -312,7 +330,7 @@ test('register reports a duplicate email as a conflict without issuing a session
 
   await service.register({
     companyLegalName: 'Ege Aluminyum Dograma Ltd.',
-    companyType: 'ALUMINUM',
+    businessDescription: 'Aluminyum Dograma Ustasi',
     fullName: 'Kemal Aydin',
     email: 'kemal@example.invalid',
     password: 'StrongPass123',
@@ -321,7 +339,7 @@ test('register reports a duplicate email as a conflict without issuing a session
   await assert.rejects(
     service.register({
       companyLegalName: 'Baska Firma Ltd.',
-      companyType: 'PVC',
+      businessDescription: 'PVC Dogramaci',
       fullName: 'Baska Kisi',
       email: 'kemal@example.invalid',
       password: 'StrongPass123',

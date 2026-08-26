@@ -111,7 +111,7 @@ test('recipient company catalog exposes only active glass producers outside the 
         },
       },
     },
-    select: { id: true, legalName: true, tradeName: true },
+    select: { id: true, legalName: true, tradeName: true, regionId: true },
     orderBy: [{ tradeName: 'asc' }, { legalName: 'asc' }],
   });
 });

@@ -71,7 +71,7 @@ export interface ApiUser {
 export interface RegisterAccountInput {
   companyLegalName: string
   companyTradeName?: string
-  companyType: CompanyType
+  businessDescription: string
   taxNumber?: string
   fullName: string
   email: string
@@ -101,12 +101,14 @@ export interface ApiCompany {
   legalName: string
   tradeName: string | null
   companyType: CompanyType
+  businessDescription: string | null
   status: CompanyStatus
   verificationStatus: CompanyVerificationStatus
   regionId: string | null
   contactEmail: string | null
   contactPhone: string | null
   taxNumber: string | null
+  activatedAt: string | null
   memberships: ApiMembership[]
 }
 
@@ -123,6 +125,20 @@ export interface CreateCompanyInput {
 }
 
 export type UpdateCompanyInput = Partial<CreateCompanyInput>
+
+export type RegionType = 'COUNTRY' | 'CITY' | 'DISTRICT' | 'ZONE'
+export type RegionStatus = 'ACTIVE' | 'INACTIVE'
+
+export interface ApiRegion {
+  id: string
+  name: string
+  parentRegionId: string | null
+  regionType: RegionType
+  code: string | null
+  country: string | null
+  city: string | null
+  status: RegionStatus
+}
 
 export interface ApiPriceCatalogItem {
   id: string
@@ -204,6 +220,7 @@ export interface ApiRequestRecipientCompany {
   id: string
   legalName: string
   tradeName: string | null
+  regionId: string | null
 }
 
 export interface ApiRequest {
@@ -563,6 +580,7 @@ export interface ApiDetectedMeasurement {
   analysisResultId: string
   ordinal: number
   label: string | null
+  suggestedProductType: string | null
   geometryType: GeometryType
   widthMm: string | null
   heightMm: string | null

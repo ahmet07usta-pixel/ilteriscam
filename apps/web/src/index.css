@@ -1741,6 +1741,14 @@ button:focus {
 }
 
 .attachment-upload-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: #ffffff;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -3059,6 +3067,28 @@ button:focus {
 
 .settings-table tbody tr:hover {
   background: rgba(242, 250, 255, 0.92);
+}
+
+.admin-company-member-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-company-member-list li {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.admin-company-member-list li span {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
 }
 
 .settings-feedback-message {

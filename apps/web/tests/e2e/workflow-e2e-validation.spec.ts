@@ -86,7 +86,7 @@ test.describe('Workflow E2E Validation', () => {
     const manualOrderTag = `E2E-SIP-${Date.now()}`
     const requestTitle = `E2E Workflow Talep ${Date.now()}`
 
-    await setUser(page, 'ADMIN')
+    await setUser(page, 'MANUFACTURER')
     await page.evaluate(() => window.localStorage.removeItem('dijitalcam.workflowStore'))
 
     await page.setViewportSize({ width: 1366, height: 900 })
@@ -171,6 +171,7 @@ test.describe('Workflow E2E Validation', () => {
     const completedAfter = await readDashboardMetric(page, 'Tamamlanan Siparisler')
     expect(completedAfter).toBeGreaterThanOrEqual(completedBefore + 1)
 
+    await setUser(page, 'BUYER')
     await page.goto('/app/talepler')
     await page.getByRole('button', { name: '+ Yeni Talep Olustur' }).click()
     const requestModal = page.getByRole('region', { name: 'Yeni Talep' })
@@ -207,7 +208,7 @@ test.describe('Workflow E2E Validation', () => {
     await buyerOfferModal.locator('label:has-text("Durum") select').selectOption('Onaylandi')
     await buyerOfferModal.locator('.request-modal-actions .solid-btn').click()
 
-    await setUser(page, 'ADMIN')
+    await setUser(page, 'MANUFACTURER')
     await page.goto('/app/siparisler')
     const transferredOrder = page.locator('table tbody tr', { hasText: requestId }).first()
     await expect(transferredOrder).toBeVisible()
@@ -227,7 +228,7 @@ test.describe('Workflow E2E Validation', () => {
     await expect(page.getByRole('button', { name: '+ Yeni Is Emri' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Duzenle' })).toHaveCount(0)
 
-    await setUser(page, 'ADMIN')
+    await setUser(page, 'MANUFACTURER')
     for (const viewport of [
       { width: 1366, height: 900 },
       { width: 390, height: 844 },

@@ -102,13 +102,14 @@ export class RequestsService {
     });
   }
 
-  async listRecipientCompanies(actor?: AuthenticatedUser) {
+  async listRecipientCompanies(actor?: AuthenticatedUser, regionId?: string) {
     const authenticatedActor = this.requireActor(actor);
 
     return this.prisma.company.findMany({
       where: {
         companyType: CompanyType.GLASS_PRODUCER,
         status: CompanyStatus.ACTIVE,
+        ...(regionId ? { regionId } : {}),
         memberships: {
           none: {
             userId: authenticatedActor.sub,
@@ -116,7 +117,7 @@ export class RequestsService {
           },
         },
       },
-      select: { id: true, legalName: true, tradeName: true },
+      select: { id: true, legalName: true, tradeName: true, regionId: true },
       orderBy: [{ tradeName: 'asc' }, { legalName: 'asc' }],
     });
   }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -28,8 +28,8 @@ export class RequestsController {
 
   @Get('recipient-companies')
   @Permissions(PERMISSIONS.REQUESTS_CREATE)
-  listRecipientCompanies(@CurrentUser() actor?: AuthenticatedUser) {
-    return this.requestsService.listRecipientCompanies(actor);
+  listRecipientCompanies(@CurrentUser() actor?: AuthenticatedUser, @Query('regionId') regionId?: string) {
+    return this.requestsService.listRecipientCompanies(actor, regionId);
   }
 
   @Get(':requestId/recipients')

@@ -35,5 +35,9 @@ login.json
 login.out
 scratch-request-check.js
 tmp-audit-*.js
+tmp-*.js
+tmp-*.ts
+tmp_*.js
+tmp_*.py
 debug-*.mjs
 backup-before-module03.sql

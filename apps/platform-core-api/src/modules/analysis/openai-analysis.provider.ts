@@ -91,7 +91,8 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
           {
             type: 'input_text',
             text: [
-              'Extract physical measurements from this technical document.',
+              'Extract physical measurements from this technical document or photo of glass.',
+              'For each measurement, also suggest a likely glass product type/category if the image or any visible labels suggest one (e.g. Temperli Cam, Lamine Cam, Isicam, Duz Cam); use null if genuinely undeterminable.',
               'Return suggestions only; a human will review them.',
               `MIME: ${input.mimeType}`,
               `Size: ${input.sizeBytes}`,
@@ -156,6 +157,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
           additionalProperties: false,
           required: [
             'label',
+            'suggestedProductType',
             'geometryType',
             'widthMm',
             'heightMm',
@@ -170,6 +172,7 @@ export class OpenAiAnalysisProvider implements AnalysisProvider {
           ],
           properties: {
             label: { type: ['string', 'null'] },
+            suggestedProductType: { type: ['string', 'null'] },
             geometryType: { type: 'string', enum: ['COUNT', 'LINE', 'RECTANGLE', 'VOLUME', 'CUSTOM'] },
             widthMm: { type: ['number', 'null'], minimum: 0 },
             heightMm: { type: ['number', 'null'], minimum: 0 },

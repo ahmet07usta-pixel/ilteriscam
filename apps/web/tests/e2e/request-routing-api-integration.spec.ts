@@ -132,11 +132,12 @@ async function openScopedPanel(browser: Browser, user: typeof buyer, visibleRequ
   return page
 }
 
-test('routes a submitted buyer request only to its recipient producer while admin retains visibility', async ({ browser, page }) => {
+test('routes a submitted buyer request only to its recipient producer; admin no longer has direct Talepler access', async ({ browser, page }) => {
   let createCalls = 0
   let submitCalls = 0
   let createBody: Record<string, unknown> | undefined
   let submittedRequest = requestFixture()
+  let createdRequest = requestFixture({ status: 'DRAFT', version: 1 })
 
   await page.route(apiPattern, async (route) => {
     const request = route.request()
@@ -153,25 +154,41 @@ test('routes a submitted buyer request only to its recipient producer while admi
     if (path === '/api/v1/requests' && request.method() === 'POST') {
       createCalls += 1
       createBody = request.postDataJSON() as Record<string, unknown>
-      const created = requestFixture({
+      createdRequest = requestFixture({
         status: 'DRAFT',
         version: 1,
         title: createBody.title,
         description: createBody.description,
         productType: createBody.productType,
       })
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(created) })
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(createdRequest) })
+      return
+    }
+    if (path === '/api/v1/requests/request-routing-1' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(createdRequest) })
+      return
+    }
+    if (path === '/api/v1/requests/request-routing-1/items' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      return
+    }
+    if (path === '/api/v1/requests/request-routing-1/attachments' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
       return
     }
     if (path === '/api/v1/requests/request-routing-1/submit' && request.method() === 'POST') {
       submitCalls += 1
       expect(request.postDataJSON()).toEqual({ version: 1 })
       submittedRequest = requestFixture()
+      createdRequest = submittedRequest
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(submittedRequest) })
       return
     }
     await route.abort()
   })
+
+  // Submitting a request with no items yet prompts a confirmation dialog; accept it for this test.
+  page.on('dialog', (dialog) => void dialog.accept())
 
   await openWithSession(page, buyer)
   await page.getByRole('button', { name: '+ Yeni Talep Olustur' }).click()
@@ -187,6 +204,13 @@ test('routes a submitted buyer request only to its recipient producer while admi
   await createModal.getByLabel('Uretici Firma').selectOption(assignedProducer.companyId)
   await createModal.getByRole('button', { name: 'Kaydet' }).click()
 
+  // Requests now stay DRAFT after creation; the detail view opens automatically so the buyer can submit explicitly.
+  const newRequestDetailModal = page.getByRole('region', { name: 'Talep Detayi' })
+  await expect(newRequestDetailModal).toBeVisible()
+  await newRequestDetailModal.getByRole('button', { name: 'Ureticiye Gonder' }).click()
+  await expect(page.getByText('Talep ureticiye gonderildi.')).toBeVisible()
+  await newRequestDetailModal.locator('.request-modal-actions').getByRole('button', { name: 'Kapat' }).click()
+
   await expect(page.locator('table tbody tr', { hasText: 'REQ-ROUTING-1' })).toContainText('Teklif Hazirlaniyor')
   expect(createBody?.recipientCompanyIds).toEqual([assignedProducer.companyId])
   expect(createCalls).toBe(1)
@@ -199,5 +223,5 @@ test('routes a submitted buyer request only to its recipient producer while admi
   await expect(otherProducerPage.locator('table tbody tr', { hasText: 'REQ-ROUTING-1' })).toHaveCount(0)
 
   const adminPage = await openScopedPanel(browser, admin, [submittedRequest])
-  await expect(adminPage.locator('table tbody tr', { hasText: 'REQ-ROUTING-1' })).toBeVisible()
+  await expect(adminPage.getByText('Bu sayfaya erişim yetkiniz bulunmamaktadır.')).toBeVisible()
 })

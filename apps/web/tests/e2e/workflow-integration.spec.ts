@@ -146,7 +146,6 @@ test.describe('Workflow Integration Chain', () => {
 
     await setUser(page, admin)
     await page.goto('/app/raporlar')
-    await expect(page.getByText('Workflow Olay Ozeti')).toBeVisible()
-    await expect(page.locator('.request-detail-card')).not.toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Alici ve Uretici Genel Raporu' })).toBeVisible()
   })
 })

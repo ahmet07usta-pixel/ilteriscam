@@ -17,6 +17,10 @@ export class ProviderMeasurementDto {
   @IsString()
   label?: string;
 
+  @IsOptional()
+  @IsString()
+  suggestedProductType?: string;
+
   @IsEnum(GeometryType)
   geometryType!: GeometryType;
 

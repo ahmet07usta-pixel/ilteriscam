@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Dijital Cam Pazaryeri - Sunum Rehberi</title>
+<style>
+  :root {
+    --accent: #188ea8;
+    --accent-dark: #123149;
+    --text: #10202e;
+    --text-soft: #4c6272;
+    --surface: rgba(255,255,255,0.86);
+    --line: rgba(24,142,168,0.22);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', 'Manrope', system-ui, sans-serif;
+    background: linear-gradient(160deg, #eaf6f8, #f7fbfc 40%, #ffffff);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  header.hero {
+    padding: 3rem 2rem 2.4rem;
+    text-align: center;
+    background: linear-gradient(140deg, var(--accent), var(--accent-dark));
+    color: #fff;
+  }
+  header.hero p.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.78rem;
+    opacity: 0.85;
+    margin: 0 0 0.6rem;
+  }
+  header.hero h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.4rem); }
+  header.hero p.sub { max-width: 640px; margin: 0.8rem auto 0; opacity: 0.92; }
+  main { max-width: 880px; margin: 0 auto; padding: 2.2rem 1.4rem 4rem; }
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.6rem 1.8rem;
+    margin-bottom: 1.6rem;
+    box-shadow: 0 8px 24px rgba(16,32,46,0.06);
+  }
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    margin-right: 0.7rem;
+    flex-shrink: 0;
+  }
+  .step h2 {
+    display: flex;
+    align-items: center;
+    margin: 0 0 0.9rem;
+    font-size: 1.15rem;
+    color: var(--accent-dark);
+  }
+  .step .narration {
+    background: rgba(24,142,168,0.07);
+    border-left: 3px solid var(--accent);
+    padding: 0.9rem 1.1rem;
+    border-radius: 8px;
+    font-style: italic;
+    color: var(--text);
+    margin: 0.8rem 0;
+  }
+  .step .howto {
+    font-size: 0.92rem;
+    color: var(--text-soft);
+  }
+  .step .howto b { color: var(--text); }
+  .step .proof {
+    margin-top: 0.7rem;
+    font-size: 0.88rem;
+    background: #fff7e6;
+    border: 1px solid #f0d9a0;
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+  }
+  code {
+    background: rgba(16,32,46,0.07);
+    padding: 0.1rem 0.4rem;
+    border-radius: 5px;
+    font-size: 0.9em;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 0.6rem; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); }
+  th { color: var(--accent-dark); }
+  .closing {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-soft);
+  }
+  .closing h2 { color: var(--accent-dark); }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <p class="eyebrow">Sunum Rehberi - Canli Ekrandan Anlatim Icin</p>
+  <h1>Dijital Cam Pazaryeri</h1>
+  <p class="sub">Bu sayfa bir video degil - gercek, canli calisan sistem uzerinde ekrani gezerken okuyacaginiz bir sunum senaryosudur. Her adimda: ne soyleyeceginiz, hangi ekrana gidip ne yapacaginiz ve gercek kanit sayilar yaziyor.</p>
+</header>
+
+<main>
+
+  <div class="step">
+    <h2><span class="step-number">1</span> Problem: Neden bu platform?</h2>
+    <p class="narration">"Bugun cam sektorunde uretici firmalar musteri bulmak icin saha satiscisina, telefon trafigine bagimli. Alici firmalar ise fiyat almak icin tek tek arama yapiyor, kimin ucuz kimin pahali oldugunu bilmiyor. Biz bu iki tarafi tek bir dijital pazaryerinde bulusturduk."</p>
+    <div class="howto">Ekranda: <b>http://127.0.0.1:4177/login</b> - giris sayfasini acik tutun, sektor metriklerini gosterin.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">2</span> Alici kendi kendine kaydolur</h2>
+    <p class="narration">"Bir alici firma - PVC dogramaci, aluminyum firmasi, cam balkoncu, fark etmez - hicbir onay beklemeden kendi kendine kayit oluyor. Firma bilgilerini ve kendi bilgilerini giriyor, aninda sisteme giriyor."</p>
+    <div class="howto"><b>/register</b> sayfasini gosterin (veya zaten kayitli bir alici ile giris yapin: <code>alici1@test.local</code> / <code>Alici2026!</code>)</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">3</span> Talep olusturma + fotograf yukleme</h2>
+    <p class="narration">"Alici, ihtiyaci olan camin fotografini ya da elle yazilmis olcu listesini yukluyor. Hicbir teknik bilgi gerekmiyor - ne yazdi ise onu yukluyor."</p>
+    <div class="howto">Giris: <b>alici2@test.local / Alici2026!</b> - Talepler sayfasinda "Canli AI Test - alici2@test.local" basligini acin, Kalemler bolumunu gosterin.</div>
+    <div class="proof"><b>Gercek kanit:</b> Bu tek talepte, gercek bir musterinin elle yazdigi fotograflar/PDF'ler AI tarafindan analiz edilerek <b>32 ayri cam kalemi</b> otomatik olarak olculeriyle (mm/m2) ve cam tipiyle (Ayna, Temperli Cam, Fume Cam, Seffaf Cam...) sisteme islendi - hicbir insan elle veri girmedi.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">4</span> Yapay zeka olculeri kendisi cikariyor</h2>
+    <p class="narration">"Burada gordugunuz olculer, hicbir insanin elle girmedigi, yapay zekanin fotograftaki el yazisindan okudugu gercek verilerdir. Genislik, yukseklik, metrekare - hepsi otomatik hesaplaniyor."</p>
+    <div class="howto">Ayni sayfada bir kalemin ustune tiklayip "Genislik / Yukseklik / Alan" degerlerini, ve satirin yanindaki "AI" rozetini gosterin.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">5</span> Talep, bolgedeki UCUNCU firmaya birden gidiyor</h2>
+    <p class="narration">"Alici tek bir firmaya degil, kendi bolgesindeki BIRDEN FAZLA uretici firmaya ayni talebi ayni anda gonderebiliyor. Boylece rekabet olusuyor, alici en iyi fiyati bulabiliyor."</p>
+    <div class="howto">Talep detayindaki "Yonlendirilen Ureticiler" alanini gosterin - birden fazla firma adi yaziyor.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">6</span> Uretici tarafi: teklif olustur, fiyat KENDILIGINDEN hesaplanir</h2>
+    <p class="narration">"Simdi ayni talebi bir uretici firma hesabindan goruyoruz. Uretici tek bir tusa basiyor - 'Teklif Olustur'. Sistem, o ureticinin KENDI fiyat listesine gore alani otomatik carpip toplam tutari kendisi hesapliyor. Uretici hicbir hesap makinesi kullanmiyor."</p>
+    <div class="howto">Giris: <b>uretici1@test.local / Uretici2026!</b> (Bogazici Cam Sanayi) - Talepler > ayni talebi acin > "+ Teklif Olustur" > kaydedin, otomatik hesaplanan tutari gosterin.</div>
+    <div class="proof"><b>Gercek kanit:</b> Bu talep icin Bogazici Cam Sanayi <b>79.119,07 TL</b> hesapladi. Ayni talebi ikinci bir uretici (Kocaeli Yapi Cam) icin denedigimizde <b>79.834 TL</b> cikti - iki firma da kendi fiyat listesiyle FARKLI sonuc uretti. Bu, sahte/sabit bir demo degil, gercekten calisan bagimsiz fiyatlandirmadir.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">7</span> Alici, gelen teklifleri karsilastirir</h2>
+    <p class="narration">"Alici artik ayni ihtiyac icin birden fazla firmadan gelen fiyati yan yana goruyor. Hangisi uygunsa onunla devam ediyor - tipki bir e-ticaret sitesinde fiyat karsilastirmasi gibi, ama cam sektorune ozel."</p>
+    <div class="howto">Alici hesabina donup (<code>alici2@test.local</code>) Teklifler sayfasini acin, gelen teklif(ler)i listeleyin.</div>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">8</span> Turkiye genelinde, her bolgede</h2>
+    <p class="narration">"Bu sadece bir sehir icin degil - biz sistemi Turkiye'nin 7 cografi bolgesinde, her bolgede 3'er uretici firmayla test ettik. Marmara'dan Guneydogu Anadolu'ya kadar ayni mantik calisiyor."</p>
+    <table>
+      <tr><th>Bolge</th><th>Uretici Sayisi</th></tr>
+      <tr><td>Marmara</td><td>3</td></tr>
+      <tr><td>Ege</td><td>3</td></tr>
+      <tr><td>Akdeniz</td><td>3</td></tr>
+      <tr><td>Ic Anadolu</td><td>3</td></tr>
+      <tr><td>Karadeniz</td><td>3</td></tr>
+      <tr><td>Dogu Anadolu</td><td>3</td></tr>
+      <tr><td>Guneydogu Anadolu</td><td>3</td></tr>
+    </table>
+  </div>
+
+  <div class="step">
+    <h2><span class="step-number">9</span> Admin: tum sistemin genel gorunumu</h2>
+    <p class="narration">"Ve son olarak, platformu yoneten taraf olarak biz - tum firmalari, aktivasyon durumlarini, iletisim bilgilerini, bolgesel dagilimi tek ekrandan goruyoruz."</p>
+    <div class="howto">Giris: <b>admin@platform.local</b> - "Firmalar" ve "Raporlar" sayfalarini gosterin.</div>
+  </div>
+
+  <div class="closing">
+    <h2>Ozet</h2>
+    <p>Alici kaydolur -> talep olusturur -> fotograf yukler -> AI olcer -> birden fazla uretici goruntuler -> her biri kendi fiyatini otomatik hesaplar -> alici karsilastirir. Tum surec, gercek fotograflar ve gercek yapay zeka ile, insan mudahalesi olmadan calisiyor.</p>
+  </div>
+
+</main>
+</body>
+</html>

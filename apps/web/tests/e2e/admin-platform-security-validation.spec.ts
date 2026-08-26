@@ -82,30 +82,11 @@ test.describe('Admin Platform, Security and System Validation', () => {
     await page.setViewportSize({ width: 1366, height: 900 })
     await page.goto('/app/ayarlar')
 
-    await expect(page.getByText('Platform Cekirdek Ayarlari')).toBeVisible()
-    await expect(page.locator('.request-detail-card', { hasText: 'Platform Dili' }).first()).toBeVisible()
-    await expect(page.locator('.request-detail-card', { hasText: 'Platform Saat Dilimi' }).first()).toBeVisible()
-    await expect(page.locator('.request-detail-card', { hasText: 'Varsayilan Para Birimi' }).first()).toBeVisible()
-    await expect(page.locator('.request-detail-card', { hasText: 'Bolgesel Format' }).first()).toBeVisible()
-
-    await page.getByRole('button', { name: '+ Ayar Kaydet' }).click()
-    const settingModal = page.getByRole('region', { name: 'Yeni Ayar' })
-    await settingModal.locator('label:has-text("Ayar Adi") input').fill('Platform Saat Dilimi')
-    await settingModal.locator('label:has-text("Deger") input').fill('Istanbul')
-    await settingModal.locator('label:has-text("Son Guncelleyen") input').fill('Platform Admin')
-    await settingModal.getByRole('button', { name: 'Kaydet' }).click()
-    await expect(settingModal.getByText('Saat dilimi Area/Location formatinda olmalidir')).toBeVisible()
-
-    await settingModal.locator('label:has-text("Deger") input').fill('Europe/Istanbul')
-    await settingModal.getByRole('button', { name: 'Kaydet' }).click()
-    await expect(page.getByText(/Ayar guncellendi|Yeni ayar kaydedildi/)).toBeVisible()
-
-    const userSection = page.locator('section', { hasText: 'Kullanici Yonetimi' }).first()
-    await expect(userSection).toBeVisible()
-    await expect(userSection).toContainText('Bu bolum gercek oturum gerektirir')
+    await expect(page.getByRole('heading', { name: 'Uretici Firma Yonetimi', level: 2 })).toBeVisible()
+    await expect(page.getByText('Bu bolum gercek oturum gerektirir; lutfen kurumsal hesabinizla giris yapin.')).toBeVisible()
 
     await page.goto('/app/firmalar')
-    await expect(page.getByRole('heading', { name: 'Firma Yonetimi' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Firmalar', level: 2 })).toBeVisible()
     await expect(page.getByText('Bu bolum gercek oturum gerektirir')).toBeVisible()
 
     await setUser(page, 'BUYER')
@@ -158,13 +139,13 @@ test.describe('Admin Platform, Security and System Validation', () => {
 
       const settingsStart = Date.now()
       await page.goto('/app/ayarlar')
-      await expect(page.getByRole('heading', { name: 'Ayarlar', exact: true })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Uretici Firma Yonetimi', level: 2, exact: true })).toBeVisible()
       const settingsLoadDuration = Date.now() - settingsStart
       expect(settingsLoadDuration).toBeLessThan(6000)
 
       const companiesStart = Date.now()
       await page.goto('/app/firmalar')
-      await expect(page.getByRole('heading', { name: 'Firma Yonetimi' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Firmalar', level: 2, exact: true })).toBeVisible()
       const companiesLoadDuration = Date.now() - companiesStart
       expect(companiesLoadDuration).toBeLessThan(6000)
       await page.mouse.wheel(0, 1200)

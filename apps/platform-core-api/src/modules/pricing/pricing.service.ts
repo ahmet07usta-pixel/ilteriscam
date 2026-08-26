@@ -114,6 +114,19 @@ export class PricingService {
       || actor.permissions.includes(PERMISSIONS.PLATFORM_ADMIN);
   }
 
+  // Word-order-agnostic, case-insensitive signature: AI-suggested product types for the SAME product can come
+  // back with words reordered between different photos (e.g. "Fume Temperli Cam" vs "Temperli Fume Cam"), but a
+  // genuinely different product type never shares the exact same set of words - so this stays safe from false matches.
+  private productTypeSignature(value: string): string {
+    return value
+      .trim()
+      .toLocaleLowerCase('tr-TR')
+      .split(/\s+/)
+      .filter(Boolean)
+      .sort()
+      .join(' ');
+  }
+
   async selectCatalog(
     manufacturerCompanyId: string,
     regionId: string | null,
@@ -122,11 +135,12 @@ export class PricingService {
     at = new Date(),
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    const candidates = await client.priceCatalogItem.findMany({
+    const normalizedProductType = requestItem.productType.trim();
+    const requestedSignature = this.productTypeSignature(normalizedProductType);
+    const poolCandidates = await client.priceCatalogItem.findMany({
       where: {
         companyId: manufacturerCompanyId,
         status: PriceCatalogStatus.ACTIVE,
-        productType: requestItem.productType,
         currency,
         ...(requestItem.productCode ? { productCode: requestItem.productCode } : {}),
         AND: [
@@ -139,9 +153,16 @@ export class PricingService {
       },
       orderBy: [{ version: 'desc' }, { productCode: 'asc' }],
     });
+    const candidates = poolCandidates.filter((candidate) => (
+      this.productTypeSignature(candidate.productType) === requestedSignature
+    ));
 
     if (candidates.length === 0) {
-      throw new BadRequestException('No active price catalog matches the approved request item');
+      throw new BadRequestException(
+        `No active price catalog item matches product type "${normalizedProductType}" (currency ${currency})`
+        + `${requestItem.productCode ? ` and product code "${requestItem.productCode}"` : ''}`
+        + '. Add a catalog entry with this exact product type (word order and case are ignored) or update the request item.',
+      );
     }
 
     const identities = new Set(candidates.map((candidate) => (

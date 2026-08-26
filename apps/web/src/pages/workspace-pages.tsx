@@ -15,10 +15,12 @@ import type {
   ApiAnalysisJob,
   ApiDetectedMeasurement,
   ApiUser,
+  ApiCompany,
   ApiPriceCatalogItem,
   PriceCatalogStatus,
   ApiManufacturerCustomer,
   ApiNotification,
+  ApiRegion,
   AttachmentStatus,
   CreateRequestItemInput,
   MeasurementSource,
@@ -33,6 +35,7 @@ import { ORDER_STATUS_LABELS, PRODUCTION_STATUS_LABELS, QUOTATION_STATUS_LABELS,
 import { analysisApi } from '../shared/api/analysis-api'
 import { attachmentsApi, uploadAttachmentBinary } from '../shared/api/attachments-api'
 import { companiesApi } from '../shared/api/companies-api'
+import { regionsApi } from '../shared/api/regions-api'
 import { usersApi } from '../shared/api/users-api'
 import { pricingApi } from '../shared/api/pricing-api'
 import { manufacturerCustomersApi } from '../shared/api/manufacturer-customers-api'
@@ -73,13 +76,13 @@ const quickActions: Array<{
   tone: 'blue' | 'teal' | 'amber'
   roles: UserRole[]
 }> = [
-  { title: 'Yeni Talep', description: 'Yeni ihtiyaci kaydet ve teklif surecini baslat.', icon: 'request', target: 'requests', tone: 'blue', roles: ['ADMIN', 'BUYER'] },
-  { title: 'Teklifleri Incele', description: 'Gelen teklifleri karsilastir ve onceliklendir.', icon: 'offers', target: 'offers', tone: 'teal', roles: ['ADMIN', 'MANUFACTURER', 'BUYER'] },
+  { title: 'Yeni Talep', description: 'Yeni ihtiyaci kaydet ve teklif surecini baslat.', icon: 'request', target: 'requests', tone: 'blue', roles: ['BUYER'] },
+  { title: 'Teklifleri Incele', description: 'Gelen teklifleri karsilastir ve onceliklendir.', icon: 'offers', target: 'offers', tone: 'teal', roles: ['MANUFACTURER', 'BUYER'] },
   { title: 'Teklif Ver', description: 'Secili talep icin yeni teklif hazirla.', icon: 'offers', target: 'offers', tone: 'amber', roles: ['MANUFACTURER'] },
-  { title: 'Siparis Olustur', description: 'Onaylanan tekliften yeni siparis ac.', icon: 'orders', target: 'orders', tone: 'blue', roles: ['ADMIN', 'MANUFACTURER'] },
-  { title: 'Uretim Takibi', description: 'Uretim asamalarini anlik olarak izle.', icon: 'production', target: 'production', tone: 'teal', roles: ['ADMIN', 'MANUFACTURER', 'BUYER'] },
+  { title: 'Siparis Olustur', description: 'Onaylanan tekliften yeni siparis ac.', icon: 'orders', target: 'orders', tone: 'blue', roles: ['MANUFACTURER'] },
+  { title: 'Uretim Takibi', description: 'Uretim asamalarini anlik olarak izle.', icon: 'production', target: 'production', tone: 'teal', roles: ['MANUFACTURER', 'BUYER'] },
   { title: 'Sevkiyat Planla', description: 'Teslimat rotasini ve cikis saatini ayarla.', icon: 'shipment', target: 'shipment', tone: 'amber', roles: ['MANUFACTURER'] },
-  { title: 'Sevkiyat Takibi', description: 'Teslimat durumunu ve varis saatini izle.', icon: 'shipment', target: 'shipment', tone: 'amber', roles: ['ADMIN', 'BUYER'] },
+  { title: 'Sevkiyat Takibi', description: 'Teslimat durumunu ve varis saatini izle.', icon: 'shipment', target: 'shipment', tone: 'amber', roles: ['BUYER'] },
   { title: 'Firma Yonetimi', description: 'Platformdaki firmalari ve durumlarini yonet.', icon: 'orders', target: 'companies', tone: 'teal', roles: ['ADMIN'] },
 ]
 
@@ -122,6 +125,7 @@ export interface RequestRow {
   companyId?: string
   company: string
   region: string
+  regionId?: string
   requestType: string
   product: string
   title: string
@@ -1245,6 +1249,7 @@ function toRequestRow(request: ApiRequest): RequestRow {
     companyId: request.companyId,
     company: request.company?.tradeName ?? request.company?.legalName ?? request.companyId,
     region: request.region?.name ?? '-',
+    regionId: request.regionId ?? undefined,
     requestType: request.productType,
     product: request.productType,
     title: request.title,
@@ -1593,6 +1598,10 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
   }, [currentUser, workflow.manufacturerCustomers, workflow.offers, workflow.orders, workflow.productions, workflow.requests, workflow.shipments])
 
   const pendingJobs = useMemo(() => {
+    if (role === 'ADMIN') {
+      return []
+    }
+
     const waitingRequests = scoped.requests.filter((row) => row.status === 'Bekleyen').length
     const waitingOffers = scoped.offers.filter((row) => row.status === 'Gonderildi').length
     const waitingOrders = scoped.orders.filter((row) => row.status === 'Bekliyor').length
@@ -1766,6 +1775,17 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
           ))}
         </section>
 
+        {role === 'ADMIN' && apiEnabled ? (
+          <section className="dashboard-bottom-charts">
+            <article className="glass-card panel chart-panel">
+              <header className="panel-header">
+                <h3>Bolgesel ve Durumsal Kirilimlar</h3>
+              </header>
+              <p>Teklif/siparis durum dagilimi ve bolgelere gore detayli istatistikler artik gercek verilerle <strong>Raporlar</strong> sayfasinda.</p>
+              <button type="button" className="solid-btn" onClick={() => onNavigate('reports')}>Raporlari Ac</button>
+            </article>
+          </section>
+        ) : (
         <section className="dashboard-bottom-charts">
           <article className="glass-card panel chart-panel">
             <header className="panel-header">
@@ -1804,6 +1824,7 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
             </ul>
           </article>
         </section>
+        )}
       </ScreenStateGate>
     </section>
   )
@@ -1836,6 +1857,32 @@ function summarizeSnapshotLinesByType(lines: ApiCalculationSnapshotLine[]): Calc
   return Array.from(groups.values()).sort((a, b) => b.totalAmount - a.totalAmount)
 }
 
+interface RequestItemTypeSummary {
+  productType: string
+  itemCount: number
+  totalQuantity: number
+  totalAreaM2: number
+}
+
+function summarizeRequestItemsByType(items: ApiRequestItem[]): RequestItemTypeSummary[] {
+  const groups = new Map<string, RequestItemTypeSummary>()
+  items.forEach((item) => {
+    const label = item.productType.trim() || 'Diger'
+    const key = label.toLowerCase()
+    const quantity = Number(item.quantity) || 0
+    const areaM2 = Number(item.calculatedAreaM2) || 0
+    const existing = groups.get(key)
+    if (existing) {
+      existing.itemCount += 1
+      existing.totalQuantity += quantity
+      existing.totalAreaM2 += areaM2
+    } else {
+      groups.set(key, { productType: label, itemCount: 1, totalQuantity: quantity, totalAreaM2: areaM2 })
+    }
+  })
+  return Array.from(groups.values()).sort((a, b) => b.totalAreaM2 - a.totalAreaM2)
+}
+
 export function TaleplerPage({ state, onRetry, currentUser, role, workflow, workflowActions }: WorkspacePageProps) {
   const apiEnabled = Boolean(currentUser?.backendRole)
   const canWriteRequests = canWriteView(role, 'requests')
@@ -1844,6 +1891,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
   const [recipientCompaniesState, setRecipientCompaniesState] = useState<'loading' | 'steady' | 'error'>('steady')
   const [selectedRecipientCompanyId, setSelectedRecipientCompanyId] = useState('')
   const [recipientFeedback, setRecipientFeedback] = useState('')
+  const [regions, setRegions] = useState<ApiRegion[]>([])
   const [apiState, setApiState] = useState<ScreenState>('steady')
   const [query, setQuery] = useState('')
   const [company, setCompany] = useState('Tum Firmalar')
@@ -1896,6 +1944,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
     () => apiEnabled ? rows : scopeRequests(rows, currentUser),
     [apiEnabled, currentUser, rows],
   )
+  const itemTypeSummary = useMemo(() => summarizeRequestItemsByType(requestItems), [requestItems])
 
   const loadApiRequests = useCallback(async () => {
     if (!apiEnabled) {
@@ -1972,6 +2021,15 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
     void loadApiRequests()
   }, [loadApiRequests])
 
+  useEffect(() => {
+    if (!apiEnabled) {
+      setRegions([])
+      return
+    }
+
+    void regionsApi.list().then(setRegions).catch(() => setRegions([]))
+  }, [apiEnabled])
+
   const isCreateFormOpen = Boolean(activeForm)
 
   useEffect(() => {
@@ -1981,7 +2039,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
     }
 
     setRecipientCompaniesState('loading')
-    void requestsApi.listRecipientCompanies()
+    void requestsApi.listRecipientCompanies(activeForm?.regionId)
       .then((companies) => {
         setRecipientCompanies(companies)
         setRecipientCompaniesState('steady')
@@ -1990,7 +2048,11 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
         setRecipientCompanies([])
         setRecipientCompaniesState('error')
       })
-  }, [requiresRecipientSelection, isCreateFormOpen])
+  }, [requiresRecipientSelection, isCreateFormOpen, activeForm?.regionId])
+
+  useEffect(() => {
+    setSelectedRecipientCompanyId('')
+  }, [activeForm?.regionId])
 
   const requestCompanies = useMemo(() => [
     'Tum Firmalar',
@@ -2092,6 +2154,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
         } else {
           const createPayload = {
             companyId: currentUser.companyId,
+            regionId: activeForm.regionId,
             title: activeForm.title.trim(),
             description: activeForm.description.trim(),
             productType: activeForm.product.trim(),
@@ -2102,9 +2165,6 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
               : {}),
           }
           saved = await requestsApi.create(createPayload)
-          if (requiresRecipientSelection) {
-            saved = await requestsApi.submit(saved.id, saved.version)
-          }
         }
 
         const mapped = toRequestRow(saved)
@@ -2114,10 +2174,13 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
             ? currentRows.map((row) => row.apiId === mapped.apiId ? mapped : row)
             : [mapped, ...currentRows]
         })
-        setFeedbackMessage(existing ? 'Talep guncellendi.' : requiresRecipientSelection ? 'Yeni talep ureticiye gonderildi.' : 'Yeni talep kaydedildi.')
+        setFeedbackMessage(existing ? 'Talep guncellendi.' : 'Talep taslak olarak olusturuldu. Cam kalemlerini (olcu/fotograf) ekleyin, hazir oldugunuzda "Ureticiye Gonder" butonuna basin.')
         setRecipientFeedback('')
         setSelectedRecipientCompanyId('')
         setActiveForm(null)
+        if (!existing) {
+          void handleViewRequest(mapped)
+        }
       } catch (error) {
         setFeedbackMessage(requestApiErrorMessage(error))
       }
@@ -2208,6 +2271,29 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
     setMeasurements({})
     setAnalysisFeedback('')
     setReviewForm(null)
+  }
+
+  const isDraftOwner = apiEnabled
+    && viewRequest?.status === 'DRAFT'
+    && Boolean(currentUser?.companyId)
+    && viewRequest?.companyId === currentUser?.companyId
+
+  const handleSubmitRequest = async () => {
+    if (!viewRequest) {
+      return
+    }
+
+    setItemFeedback('')
+    try {
+      const submitted = await requestsApi.submit(viewRequest.id, viewRequest.version)
+      const mapped = toRequestRow(submitted)
+      setViewRequest(submitted)
+      setViewRow(mapped)
+      setApiRows((currentRows) => currentRows.map((row) => row.apiId === mapped.apiId ? mapped : row))
+      setFeedbackMessage('Talep ureticiye gonderildi.')
+    } catch (error) {
+      setItemFeedback(requestApiErrorMessage(error))
+    }
   }
 
   const handleSaveRequestItem = async () => {
@@ -2305,8 +2391,11 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
       setAttachmentUploadStage(`${file.name} dogrulaniyor...`)
       uploadPhase = 'complete'
       await attachmentsApi.completeUpload(viewRequest.id, initiated.attachment.id, initiated.attachment.version)
-      setAttachmentFeedback('Dosya yuklendi ve backend tarafindan dogrulandi.')
-      await loadAttachments(viewRequest.id)
+      setAttachmentFeedback('Dosya yuklendi, olcu analizi otomatik baslatildi.')
+      const refreshedAttachments = await loadAttachments(viewRequest.id)
+      if (canReadAnalysis) {
+        await loadAnalysisJobs(viewRequest.id, refreshedAttachments ?? [])
+      }
     } catch (error) {
       setAttachmentFeedback(attachmentErrorMessage(error, uploadPhase))
       if (uploadInitiated) await loadAttachments(viewRequest.id)
@@ -2752,6 +2841,37 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                   ))}
                 </select>
               </label>
+              {apiEnabled ? (
+                <label>
+                  Bolge
+                  <select
+                    value={activeForm.regionId ?? ''}
+                    onChange={(event) => {
+                      const nextRegionId = event.target.value || undefined
+                      const nextRegionName = regions.find((region) => region.id === nextRegionId)?.name ?? '-'
+                      setActiveForm((current) => (current ? { ...current, regionId: nextRegionId, region: nextRegionName } : current))
+                    }}
+                  >
+                    <option value="">Tum bolgeler</option>
+                    {regions.map((region) => (
+                      <option key={region.id} value={region.id}>
+                        {region.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  Bolge
+                  <select value={activeForm.region} onChange={(event) => setActiveForm((current) => (current ? { ...current, region: event.target.value } : current))}>
+                    {requestRegions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {requiresRecipientSelection && !activeForm.apiId && (
                 <label>
                   Uretici Firma (zorunlu)
@@ -2778,7 +2898,9 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
               )}
               {requiresRecipientSelection && recipientCompaniesState === 'steady' && recipientCompanies.length === 0 && (
                 <p className="ui-feedback-message request-item-feedback full-width">
-                  Henuz aktif uretici firma yok. Talep olusturabilmeniz icin once en az bir uretici firma kayitli ve aktif olmali.
+                  {activeForm.regionId
+                    ? 'Bu bolgede henuz aktif uretici firma yok. Baska bir bolge secin veya bolge filtresini kaldirin.'
+                    : 'Henuz aktif uretici firma yok. Talep olusturabilmeniz icin once en az bir uretici firma kayitli ve aktif olmali.'}
                 </p>
               )}
               {recipientFeedback && (
@@ -2786,16 +2908,6 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                   <p className="ui-feedback-message request-item-feedback">{recipientFeedback}</p>
                 </div>
               )}
-              <label>
-                Bolge
-                <select value={activeForm.region} onChange={(event) => setActiveForm((current) => (current ? { ...current, region: event.target.value } : current))}>
-                  {requestRegions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <label>
                 Talep Turu
                 <select value={activeForm.requestType} onChange={(event) => setActiveForm((current) => (current ? { ...current, requestType: event.target.value } : current))}>
@@ -2859,13 +2971,34 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
           title="Talep Detayi"
           onClose={closeRequestDetail}
           footer={
-            <button type="button" className="solid-btn" onClick={closeRequestDetail}>
-              Kapat
-            </button>
+            <>
+              {isDraftOwner && (
+                <button
+                  type="button"
+                  className="solid-btn"
+                  onClick={() => {
+                    if (requestItems.length === 0 && !window.confirm('Henuz hic cam kalemi eklemediniz. Yine de ureticiye gondermek istiyor musunuz?')) {
+                      return
+                    }
+                    void handleSubmitRequest()
+                  }}
+                >
+                  Ureticiye Gonder
+                </button>
+              )}
+              <button type="button" className="ghost-btn" onClick={closeRequestDetail}>
+                Kapat
+              </button>
+            </>
           }
         >
           {detailState === 'loading' && <div className="request-detail-state">Talep detayi yukleniyor...</div>}
           {detailState === 'error' && <div className="request-detail-state error">Talep detayi yuklenemedi.</div>}
+          {isDraftOwner && (
+            <p className="ui-feedback-message request-item-feedback full-width">
+              Bu talep henuz taslak halinde, sadece siz gorebilirsiniz. Cam kalemlerini (olcu/fotograf) ekleyip hazir oldugunuzda "Ureticiye Gonder" butonuna basin.
+            </p>
+          )}
           {viewRow && detailState !== 'loading' && (
             <div className="request-detail-grid">
               <article className="request-detail-card">
@@ -2944,6 +3077,18 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                     )}
                   </header>
 
+                  {canReadItems && itemTypeSummary.length > 0 && (
+                    <section className="request-overview-grid calculation-type-summary" aria-label="Cam Turune Gore Ozet">
+                      {itemTypeSummary.map((group) => (
+                        <article key={group.productType} className="request-detail-card">
+                          <span>{group.productType}</span>
+                          <strong>{group.itemCount} kalem</strong>
+                          <small>Toplam miktar: {group.totalQuantity} | Toplam alan: {group.totalAreaM2.toFixed(2)} m2</small>
+                        </article>
+                      ))}
+                    </section>
+                  )}
+
                   {!canReadItems && <div className="request-items-empty">Kalemleri goruntuleme yetkiniz bulunmuyor.</div>}
                   {canReadItems && itemsState === 'loading' && <div className="request-items-empty">Kalemler yukleniyor...</div>}
                   {canReadItems && itemsState === 'error' && (
@@ -2982,7 +3127,13 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                             <tr>
                               <td>{item.lineNumber}</td>
                               <td>{item.description}</td>
-                              <td>{item.productType}<small>{item.productCode ?? '-'}</small></td>
+                              <td>
+                                {item.productType}
+                                {(item.measurementSource === 'AI' || item.measurementSource === 'AI_CORRECTED') && (
+                                  <span className="request-badge" title="AI ile otomatik olusturuldu">AI</span>
+                                )}
+                                <small>{item.productCode ?? '-'}</small>
+                              </td>
                               <td>{item.quantity ?? '-'} {item.unit ?? ''}</td>
                               <td>{measurementSummary(item)}</td>
                               <td><span className="request-badge">{measurementStatusLabel(item.measurementStatus)}</span></td>
@@ -3497,7 +3648,7 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
         })
         setFeedback('Teklif guncellendi.')
       } else {
-        await quotationsApi.create(form.requestId, {
+        const created = await quotationsApi.create(form.requestId, {
           manufacturerCompanyId: form.manufacturerCompanyId,
           totalAmount,
           currency: form.currency,
@@ -3505,7 +3656,22 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
           validUntil: new Date(`${form.validUntil}T23:59:59.999Z`).toISOString(),
           notes: optionalText(form.notes),
         })
-        setFeedback('Teklif olusturuldu.')
+        if (canCreateCalculations && canFinalizeCalculations) {
+          try {
+            const generated = await quotationCalculationsApi.generate(created.id)
+            await quotationCalculationsApi.finalize(created.id, generated.id, {
+              quotationVersion: created.version,
+              calculationVersion: generated.calculationVersion,
+            })
+            setFeedback('Teklif olusturuldu; fiyat, fiyat listenize gore otomatik hesaplandi.')
+          } catch (calculationError) {
+            // Best effort: producer can still generate/finalize manually from the quotation detail view below.
+            setFeedback(`Teklif olusturuldu. Otomatik fiyat hesaplanamadi: ${calculationErrorMessage(calculationError)}`)
+          }
+        } else {
+          setFeedback('Teklif olusturuldu.')
+        }
+        await loadDetail(created.id)
       }
       setForm(null)
       await loadQuotations()
@@ -3788,7 +3954,12 @@ function quotationErrorMessage(error: unknown): string {
 
 function calculationErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 400) return 'Hesaplama icin en az bir onayli talep kalemi gereklidir.'
+    if (error.status === 400) {
+      if (error.message.includes('At least one approved request item')) {
+        return 'Hesaplama icin en az bir onayli talep kalemi gereklidir.'
+      }
+      return `Hesaplama yapilamadi: ${error.message}`
+    }
     if (error.status === 403) return 'Bu hesaplama islemi icin yetkiniz bulunmuyor.'
     if (error.status === 404) return 'Hesaplama bulunamadi veya erisim kapsaminizin disinda.'
     if (error.status === 409) return 'Hesaplama baska bir islem nedeniyle degisti.'
@@ -7098,7 +7269,283 @@ function manufacturerCustomerApiErrorMessage(error: unknown): string {
   return 'Firma kaydi kaydedilemedi.'
 }
 
-export function FirmalarPage({ state, onRetry, currentUser, role }: WorkspacePageProps) {
+export function FirmalarPage(props: WorkspacePageProps) {
+  return props.role === 'ADMIN' ? <AdminCompaniesPage {...props} /> : <LegacyFirmalarPage {...props} />
+}
+
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null
+  const diffMs = Date.now() - new Date(iso).getTime()
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+}
+
+function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps) {
+  const apiEnabled = Boolean(currentUser?.backendRole)
+
+  const [companies, setCompanies] = useState<ApiCompany[]>([])
+  const [users, setUsers] = useState<ApiUser[]>([])
+  const [regions, setRegions] = useState<ApiRegion[]>([])
+  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'steady' | 'error'>('idle')
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'Tumu' | 'Uretici' | 'Alici'>('Tumu')
+  const [regionFilter, setRegionFilter] = useState('Tumu')
+  const [statusFilter, setStatusFilter] = useState<'Tumu' | 'Aktif' | 'Pasif'>('Tumu')
+  const [viewCompany, setViewCompany] = useState<ApiCompany | null>(null)
+
+  const loadAll = useCallback(async () => {
+    setLoadState('loading')
+    try {
+      const [companiesData, usersData, regionsData] = await Promise.all([
+        companiesApi.list(),
+        usersApi.list(),
+        regionsApi.list(),
+      ])
+      setCompanies(companiesData)
+      setUsers(usersData)
+      setRegions(regionsData)
+      setLoadState('steady')
+    } catch {
+      setLoadState('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (apiEnabled) {
+      void loadAll()
+    }
+  }, [apiEnabled, loadAll])
+
+  const regionNameById = useMemo(() => new Map(regions.map((region) => [region.id, region.name])), [regions])
+  const userById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users])
+
+  const filteredCompanies = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+    return companies.filter((company) => {
+      const matchesType =
+        typeFilter === 'Tumu' ||
+        (typeFilter === 'Uretici' && isProducerCompany(company)) ||
+        (typeFilter === 'Alici' && !isProducerCompany(company))
+      const matchesRegion = regionFilter === 'Tumu' || company.regionId === regionFilter
+      const matchesStatus =
+        statusFilter === 'Tumu' ||
+        (statusFilter === 'Aktif' && company.status === 'ACTIVE') ||
+        (statusFilter === 'Pasif' && company.status !== 'ACTIVE')
+      const matchesQuery =
+        !normalizedQuery
+        || `${company.legalName} ${company.tradeName ?? ''} ${company.contactEmail ?? ''} ${company.contactPhone ?? ''}`
+          .toLowerCase()
+          .includes(normalizedQuery)
+      return matchesType && matchesRegion && matchesStatus && matchesQuery
+    })
+  }, [companies, query, regionFilter, statusFilter, typeFilter])
+
+  return (
+    <section className="workspace-main dashboard-main settings-page">
+      <ScreenStateGate state={state} onRetry={onRetry}>
+        <section className="settings-header-row">
+          <header className="workspace-header glass-card dashboard-hero settings-hero">
+            <div>
+              <p className="eyebrow">Platform Yonetimi</p>
+              <h2>Firmalar</h2>
+              <p>Platformdaki tum uretici ve alici firmalarin iletisim bilgilerine ve aktivasyon gecmisine buradan ulasin.</p>
+            </div>
+          </header>
+        </section>
+
+        {!apiEnabled ? (
+          <section className="glass-card panel settings-table-panel">
+            <header className="panel-header settings-table-head">
+              <div>
+                <h3>Firmalar</h3>
+                <p>Bu bolum gercek oturum gerektirir; lutfen kurumsal hesabinizla giris yapin.</p>
+              </div>
+            </header>
+          </section>
+        ) : loadState === 'error' ? (
+          <section className="glass-card panel settings-table-panel">
+            <p className="ui-feedback-message request-item-feedback">Firmalar yuklenemedi.</p>
+            <button type="button" className="ghost-btn" onClick={() => void loadAll()}>Yeniden dene</button>
+          </section>
+        ) : (
+          <>
+            <section className="glass-card panel settings-filter-panel">
+              <header className="panel-header">
+                <h3>Filtreler</h3>
+              </header>
+              <div className="settings-filter-grid">
+                <label className="settings-filter-field settings-filter-search">
+                  <span>Ara</span>
+                  <input
+                    type="search"
+                    value={query}
+                    placeholder="Firma adi, e-posta veya telefon"
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
+                </label>
+                <label className="settings-filter-field">
+                  <span>Tur</span>
+                  <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}>
+                    <option value="Tumu">Tumu</option>
+                    <option value="Uretici">Uretici</option>
+                    <option value="Alici">Alici</option>
+                  </select>
+                </label>
+                <label className="settings-filter-field">
+                  <span>Bolge</span>
+                  <select value={regionFilter} onChange={(event) => setRegionFilter(event.target.value)}>
+                    <option value="Tumu">Tumu</option>
+                    {regions.map((region) => (
+                      <option key={region.id} value={region.id}>{region.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="settings-filter-field">
+                  <span>Durum</span>
+                  <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
+                    <option value="Tumu">Tumu</option>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Pasif">Pasif</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="glass-card panel settings-table-panel">
+              <header className="panel-header settings-table-head">
+                <div>
+                  <h3>Firma Listesi</h3>
+                  <p>{filteredCompanies.length} kayit gosteriliyor</p>
+                </div>
+              </header>
+
+              {loadState === 'steady' && filteredCompanies.length === 0 ? <p>Kayitli firma bulunamadi.</p> : null}
+
+              {loadState === 'loading' ? (
+                <p>Yukleniyor...</p>
+              ) : (
+                <div className="table-wrap settings-table-wrap">
+                  <table className="settings-table">
+                    <thead>
+                      <tr>
+                        <th>Firma Adi</th>
+                        <th>Tur</th>
+                        <th>Bolge</th>
+                        <th>Durum</th>
+                        <th>Aktivasyon</th>
+                        <th>Iletisim</th>
+                        <th>Islem</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredCompanies.map((company) => {
+                        const activeDays = company.status === 'ACTIVE' ? daysSince(company.activatedAt) : null
+                        return (
+                          <tr key={company.id}>
+                            <td>{company.tradeName || company.legalName}</td>
+                            <td>{isProducerCompany(company) ? 'Uretici' : 'Alici'}</td>
+                            <td>{company.regionId ? regionNameById.get(company.regionId) ?? '-' : '-'}</td>
+                            <td>
+                              <span className={company.status === 'ACTIVE' ? 'status-pill read' : 'status-pill unread'}>
+                                {company.status === 'ACTIVE' ? 'Aktif' : company.status === 'SUSPENDED' ? 'Askida' : 'Pasif'}
+                              </span>
+                            </td>
+                            <td>{activeDays === null ? '-' : `${activeDays} gundur aktif`}</td>
+                            <td>{company.contactEmail ?? company.contactPhone ?? '-'}</td>
+                            <td>
+                              <button type="button" className="ghost-btn settings-action-btn" onClick={() => setViewCompany(company)}>
+                                Detay
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        <RequestModal
+          open={Boolean(viewCompany)}
+          title={viewCompany?.tradeName || viewCompany?.legalName || 'Firma Detayi'}
+          onClose={() => setViewCompany(null)}
+          footer={<button type="button" className="ghost-btn" onClick={() => setViewCompany(null)}>Kapat</button>}
+        >
+          {viewCompany ? (
+            <div className="request-overview-grid">
+              <article className="request-detail-card">
+                <span>Yasal Unvan</span>
+                <strong>{viewCompany.legalName}</strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Tur</span>
+                <strong>{isProducerCompany(viewCompany) ? 'Uretici' : 'Alici'} ({viewCompany.companyType})</strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Firma Turu / Meslek</span>
+                <strong>{viewCompany.businessDescription ?? '-'}</strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Bolge</span>
+                <strong>{viewCompany.regionId ? regionNameById.get(viewCompany.regionId) ?? '-' : '-'}</strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Durum</span>
+                <strong>{viewCompany.status === 'ACTIVE' ? 'Aktif' : viewCompany.status === 'SUSPENDED' ? 'Askida' : 'Pasif'}</strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Onay Durumu</span>
+                <strong>
+                  {viewCompany.verificationStatus === 'VERIFIED' ? 'Onaylandi' : viewCompany.verificationStatus === 'REJECTED' ? 'Reddedildi' : 'Beklemede'}
+                </strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Aktivasyon Tarihi</span>
+                <strong>{viewCompany.activatedAt ? new Date(viewCompany.activatedAt).toLocaleDateString('tr-TR') : 'Henuz aktif edilmedi'}</strong>
+                {viewCompany.status === 'ACTIVE' && viewCompany.activatedAt ? <small>{daysSince(viewCompany.activatedAt)} gundur aktif</small> : null}
+              </article>
+              <article className="request-detail-card">
+                <span>E-posta</span>
+                <strong>{viewCompany.contactEmail ? <a href={`mailto:${viewCompany.contactEmail}`}>{viewCompany.contactEmail}</a> : '-'}</strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Telefon</span>
+                <strong>{viewCompany.contactPhone ? <a href={`tel:${viewCompany.contactPhone}`}>{viewCompany.contactPhone}</a> : '-'}</strong>
+              </article>
+              <article className="request-detail-card">
+                <span>Vergi No</span>
+                <strong>{viewCompany.taxNumber ?? '-'}</strong>
+              </article>
+              <article className="request-detail-card full-width">
+                <span>Uyeler ({viewCompany.memberships.length})</span>
+                {viewCompany.memberships.length === 0 ? (
+                  <strong>Kayitli uye yok</strong>
+                ) : (
+                  <ul className="admin-company-member-list">
+                    {viewCompany.memberships.map((membership) => {
+                      const user = userById.get(membership.userId)
+                      return (
+                        <li key={membership.id}>
+                          <strong>{user?.fullName ?? 'Bilinmeyen kullanici'}</strong>
+                          <span>{user?.email ?? membership.userId}</span>
+                          <span>{membership.role} - {membership.status === 'ACTIVE' ? 'Aktif' : 'Pasif'}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </article>
+            </div>
+          ) : null}
+        </RequestModal>
+      </ScreenStateGate>
+    </section>
+  )
+}
+
+function LegacyFirmalarPage({ state, onRetry, currentUser, role }: WorkspacePageProps) {
   const apiEnabled = Boolean(currentUser?.backendRole)
   const canWrite = canWriteView(role, 'companies')
   const [rows, setRows] = useState<ApiManufacturerCustomer[]>([])
@@ -7667,7 +8114,11 @@ export function FirmalarPage({ state, onRetry, currentUser, role }: WorkspacePag
   )
 }
 
-export function RaporlarPage({ state, onRetry, currentUser, role, workflow }: WorkspacePageProps) {
+export function RaporlarPage(props: WorkspacePageProps) {
+  return props.role === 'ADMIN' ? <AdminReportsPage {...props} /> : <LegacyRaporlarPage {...props} />
+}
+
+function LegacyRaporlarPage({ state, onRetry, currentUser, role, workflow }: WorkspacePageProps) {
   const [company, setCompany] = useState(() => (currentUser && currentUser.role !== 'ADMIN' ? currentUser.company : 'Tum Firmalar'))
   const [reportType, setReportType] = useState<'Tum Rapor Turleri' | ReportType>('Tum Rapor Turleri')
   const [status, setStatus] = useState<'Tum Durumlar' | ReportStatus>('Tum Durumlar')
@@ -8075,6 +8526,198 @@ export function RaporlarPage({ state, onRetry, currentUser, role, workflow }: Wo
   )
 }
 
+function AdminReportsPage({ state, onRetry, currentUser }: WorkspacePageProps) {
+  const apiEnabled = Boolean(currentUser?.backendRole)
+  const [requests, setRequests] = useState<ApiRequest[]>([])
+  const [quotations, setQuotations] = useState<ApiQuotation[]>([])
+  const [orders, setOrders] = useState<ApiOrderView[]>([])
+  const [companies, setCompanies] = useState<ApiCompany[]>([])
+  const [regions, setRegions] = useState<ApiRegion[]>([])
+  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'steady' | 'error'>('idle')
+
+  const loadAll = useCallback(async () => {
+    setLoadState('loading')
+    try {
+      const [requestsData, quotationsData, ordersData, companiesData, regionsData] = await Promise.all([
+        requestsApi.list(),
+        quotationsApi.list(),
+        ordersApi.list(),
+        companiesApi.list(),
+        regionsApi.list(),
+      ])
+      setRequests(requestsData)
+      setQuotations(quotationsData)
+      setOrders(ordersData)
+      setCompanies(companiesData)
+      setRegions(regionsData)
+      setLoadState('steady')
+    } catch {
+      setLoadState('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (apiEnabled) {
+      void loadAll()
+    }
+  }, [apiEnabled, loadAll])
+
+  const stats = useMemo(() => {
+    const producerCount = companies.filter((item) => item.companyType === 'GLASS_PRODUCER').length
+    return {
+      totalRequests: requests.length,
+      totalQuotations: quotations.length,
+      totalOrders: orders.length,
+      producerCount,
+      buyerCount: companies.length - producerCount,
+      pendingCompanies: companies.filter((item) => item.status !== 'ACTIVE').length,
+    }
+  }, [companies, orders, quotations, requests])
+
+  const regionBreakdown = useMemo(() => {
+    const regionNameById = new Map(regions.map((region) => [region.id, region.name]))
+    const counts = new Map<string, { requestCount: number; companyCount: number }>()
+
+    requests.forEach((request) => {
+      const label = request.regionId ? regionNameById.get(request.regionId) ?? 'Bilinmeyen bolge' : 'Belirtilmemis'
+      const entry = counts.get(label) ?? { requestCount: 0, companyCount: 0 }
+      entry.requestCount += 1
+      counts.set(label, entry)
+    })
+    companies.forEach((company) => {
+      const label = company.regionId ? regionNameById.get(company.regionId) ?? 'Bilinmeyen bolge' : 'Belirtilmemis'
+      const entry = counts.get(label) ?? { requestCount: 0, companyCount: 0 }
+      entry.companyCount += 1
+      counts.set(label, entry)
+    })
+
+    return Array.from(counts.entries())
+      .map(([region, value]) => ({ region, ...value }))
+      .sort((a, b) => (b.requestCount + b.companyCount) - (a.requestCount + a.companyCount))
+  }, [companies, regions, requests])
+
+  const quotationStatusBreakdown = useMemo(() => {
+    const counts = new Map<ApiQuotationStatus, number>()
+    quotations.forEach((quotation) => {
+      counts.set(quotation.status, (counts.get(quotation.status) ?? 0) + 1)
+    })
+    return Array.from(counts.entries()).map(([statusKey, count]) => ({ statusKey, count }))
+  }, [quotations])
+
+  return (
+    <section className="workspace-main dashboard-main settings-page">
+      <ScreenStateGate state={state} onRetry={onRetry}>
+        <section className="settings-header-row">
+          <header className="workspace-header glass-card dashboard-hero settings-hero">
+            <div>
+              <p className="eyebrow">Platform Raporlari</p>
+              <h2>Alici ve Uretici Genel Raporu</h2>
+              <p>Platform genelindeki gercek verilere dayali istatistikler ve bolgesel dagilim.</p>
+            </div>
+          </header>
+        </section>
+
+        {!apiEnabled ? (
+          <section className="glass-card panel settings-table-panel">
+            <header className="panel-header settings-table-head">
+              <div>
+                <h3>Raporlar</h3>
+                <p>Bu bolum gercek oturum gerektirir; lutfen kurumsal hesabinizla giris yapin.</p>
+              </div>
+            </header>
+          </section>
+        ) : loadState === 'error' ? (
+          <section className="glass-card panel settings-table-panel">
+            <p className="ui-feedback-message request-item-feedback">Raporlar yuklenemedi.</p>
+            <button type="button" className="ghost-btn" onClick={() => void loadAll()}>Yeniden dene</button>
+          </section>
+        ) : (
+          <>
+            <section className="stat-grid settings-stats-grid">
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Toplam Talep</span>
+                <strong>{stats.totalRequests}</strong>
+                <small>Platform geneli (gercek veri)</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Toplam Teklif</span>
+                <strong>{stats.totalQuotations}</strong>
+                <small>Platform geneli (gercek veri)</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Toplam Siparis</span>
+                <strong>{stats.totalOrders}</strong>
+                <small>Platform geneli (gercek veri)</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Uretici Firma</span>
+                <strong>{stats.producerCount}</strong>
+                <small>Aktif ve pasif tum uretici firmalar</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Alici Firma</span>
+                <strong>{stats.buyerCount}</strong>
+                <small>Kendi kaydini olusturan alici firmalar</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Onay Bekleyen Firma</span>
+                <strong>{stats.pendingCompanies}</strong>
+                <small>Aktivasyon bekleyen veya pasif firmalar</small>
+              </article>
+            </section>
+
+            <section className="glass-card panel settings-table-panel">
+              <header className="panel-header settings-table-head">
+                <div>
+                  <h3>Bolgelere Gore Dagilim</h3>
+                  <p>Talep ve firma sayilarinin bolgelere gore kirilimi</p>
+                </div>
+              </header>
+              <div className="table-wrap settings-table-wrap">
+                <table className="settings-table">
+                  <thead>
+                    <tr><th>Bolge</th><th>Talep Sayisi</th><th>Firma Sayisi</th></tr>
+                  </thead>
+                  <tbody>
+                    {regionBreakdown.length === 0 ? (
+                      <tr><td colSpan={3}>Henuz veri yok.</td></tr>
+                    ) : regionBreakdown.map((row) => (
+                      <tr key={row.region}>
+                        <td>{row.region}</td>
+                        <td>{row.requestCount}</td>
+                        <td>{row.companyCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="glass-card panel settings-table-panel">
+              <header className="panel-header settings-table-head">
+                <div>
+                  <h3>Teklif Durum Dagilimi</h3>
+                  <p>Tum tekliflerin durumlarina gore sayisi</p>
+                </div>
+              </header>
+              <div className="request-detail-grid">
+                {quotationStatusBreakdown.length === 0 ? (
+                  <article className="request-detail-card"><span>Veri yok</span><strong>0</strong></article>
+                ) : quotationStatusBreakdown.map((item) => (
+                  <article key={item.statusKey} className="request-detail-card">
+                    <span>{QUOTATION_STATUS_LABELS[item.statusKey] ?? item.statusKey}</span>
+                    <strong>{item.count}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+      </ScreenStateGate>
+    </section>
+  )
+}
+
 interface NewUserFormState {
   fullName: string
   email: string
@@ -8084,7 +8727,11 @@ interface NewUserFormState {
   companyLegalName: string
 }
 
-export function AyarlarPage({ state, onRetry, currentUser, role }: WorkspacePageProps) {
+export function AyarlarPage(props: WorkspacePageProps) {
+  return props.role === 'ADMIN' ? <AdminSettingsPage {...props} /> : <LegacyAyarlarPage {...props} />
+}
+
+function LegacyAyarlarPage({ state, onRetry, currentUser, role }: WorkspacePageProps) {
   const isPlatformAdmin = role === 'ADMIN'
   const apiEnabled = Boolean(currentUser?.backendRole)
   const showConfiguration = role !== 'BUYER'
@@ -8786,6 +9433,405 @@ export function AyarlarPage({ state, onRetry, currentUser, role }: WorkspacePage
             setFeedbackMessage('Ayar silindi.')
           }}
         />
+      </ScreenStateGate>
+    </section>
+  )
+}
+
+interface NewProducerFormState {
+  fullName: string
+  email: string
+  phone: string
+  password: string
+  companyLegalName: string
+  regionId: string
+}
+
+function buildNewProducerForm(): NewProducerFormState {
+  return { fullName: '', email: '', phone: '', password: '', companyLegalName: '', regionId: '' }
+}
+
+function isProducerCompany(company: ApiCompany): boolean {
+  return company.companyType === 'GLASS_PRODUCER'
+}
+
+function AdminSettingsPage({ state, onRetry, currentUser }: WorkspacePageProps) {
+  const apiEnabled = Boolean(currentUser?.backendRole)
+
+  const [companies, setCompanies] = useState<ApiCompany[]>([])
+  const [companiesState, setCompaniesState] = useState<'idle' | 'loading' | 'steady' | 'error'>('idle')
+  const [regions, setRegions] = useState<ApiRegion[]>([])
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'Tumu' | 'Uretici' | 'Alici'>('Tumu')
+  const [statusFilter, setStatusFilter] = useState<'Tumu' | 'Aktif' | 'Pasif'>('Tumu')
+  const [activeForm, setActiveForm] = useState<NewProducerFormState | null>(null)
+  const [formError, setFormError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [togglingCompanyId, setTogglingCompanyId] = useState<string | null>(null)
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+
+  const loadCompanies = useCallback(async () => {
+    setCompaniesState('loading')
+    try {
+      const items = await companiesApi.list()
+      setCompanies(items)
+      setCompaniesState('steady')
+    } catch {
+      setCompanies([])
+      setCompaniesState('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (apiEnabled) {
+      void loadCompanies()
+      void regionsApi.list().then(setRegions).catch(() => setRegions([]))
+    }
+  }, [apiEnabled, loadCompanies])
+
+  const regionNameById = useMemo(() => new Map(regions.map((region) => [region.id, region.name])), [regions])
+
+  useEffect(() => {
+    if (!feedbackMessage) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => setFeedbackMessage(''), 2600)
+    return () => window.clearTimeout(timeoutId)
+  }, [feedbackMessage])
+
+  const stats = useMemo(() => {
+    const producerCount = companies.filter(isProducerCompany).length
+    return {
+      total: companies.length,
+      producerCount,
+      buyerCount: companies.length - producerCount,
+      pendingCount: companies.filter((company) => company.status !== 'ACTIVE').length,
+    }
+  }, [companies])
+
+  const filteredCompanies = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+    return companies.filter((company) => {
+      const matchesType =
+        typeFilter === 'Tumu' ||
+        (typeFilter === 'Uretici' && isProducerCompany(company)) ||
+        (typeFilter === 'Alici' && !isProducerCompany(company))
+      const matchesStatus =
+        statusFilter === 'Tumu' ||
+        (statusFilter === 'Aktif' && company.status === 'ACTIVE') ||
+        (statusFilter === 'Pasif' && company.status !== 'ACTIVE')
+      const matchesQuery =
+        !normalizedQuery || `${company.legalName} ${company.tradeName ?? ''}`.toLowerCase().includes(normalizedQuery)
+      return matchesType && matchesStatus && matchesQuery
+    })
+  }, [companies, query, statusFilter, typeFilter])
+
+  const handleToggleCompanyStatus = async (company: ApiCompany) => {
+    setTogglingCompanyId(company.id)
+    try {
+      const nextStatus = company.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+      await companiesApi.update(company.id, { status: nextStatus })
+      await loadCompanies()
+      setFeedbackMessage(nextStatus === 'ACTIVE' ? 'Firma aktiflestirildi.' : 'Firma pasife alindi.')
+    } catch (error) {
+      setFeedbackMessage(error instanceof ApiError ? error.message : 'Islem gerceklestirilemedi.')
+    } finally {
+      setTogglingCompanyId(null)
+    }
+  }
+
+  const handleCreateProducer = async () => {
+    if (!activeForm) {
+      return
+    }
+
+    const fullName = activeForm.fullName.trim()
+    const email = activeForm.email.trim().toLowerCase()
+    const phone = activeForm.phone.trim()
+    const companyLegalName = activeForm.companyLegalName.trim()
+
+    if (!fullName || !email || !activeForm.password || !companyLegalName) {
+      setFormError('Lutfen tum zorunlu alanlari doldurun.')
+      return
+    }
+
+    if (!activeForm.regionId) {
+      setFormError('Ureticinin uretim yaptigi bolgeyi secmeniz zorunludur.')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormError('E-posta adresi gecersiz.')
+      return
+    }
+
+    if (activeForm.password.length < 8) {
+      setFormError('Sifre en az 8 karakter olmalidir.')
+      return
+    }
+
+    setFormError('')
+    setIsSaving(true)
+
+    try {
+      const company = await companiesApi.create({
+        legalName: companyLegalName,
+        companyType: 'GLASS_PRODUCER',
+        status: 'INACTIVE',
+        regionId: activeForm.regionId,
+      })
+
+      const user = await usersApi.create({
+        fullName,
+        email,
+        phone: phone || undefined,
+        password: activeForm.password,
+        role: 'PRODUCER',
+      })
+
+      await companiesApi.addMembership(company.id, user.id, 'OWNER')
+      await loadCompanies()
+      setFeedbackMessage('Uretici firma olusturuldu. Listeden aktiflestirmeyi unutmayin.')
+      setActiveForm(null)
+    } catch (error) {
+      setFormError(error instanceof ApiError ? error.message : 'Firma olusturulamadi.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <section className="workspace-main dashboard-main settings-page">
+      <ScreenStateGate state={state} onRetry={onRetry}>
+        <section className="settings-header-row">
+          <header className="workspace-header glass-card dashboard-hero settings-hero">
+            <div>
+              <p className="eyebrow">Platform Yonetimi</p>
+              <h2>Uretici Firma Yonetimi</h2>
+              <p>Uretici firma hesaplarini olusturun, onaylayin ve platformdaki tum firmalari tek yerden izleyin.</p>
+            </div>
+            {apiEnabled ? (
+              <button
+                type="button"
+                className="solid-btn"
+                onClick={() => {
+                  setFormError('')
+                  setActiveForm(buildNewProducerForm())
+                }}
+              >
+                + Yeni Uretici Firma
+              </button>
+            ) : null}
+          </header>
+        </section>
+
+        {!apiEnabled ? (
+          <section className="glass-card panel settings-table-panel">
+            <header className="panel-header settings-table-head">
+              <div>
+                <h3>Uretici Firma Yonetimi</h3>
+                <p>Bu bolum gercek oturum gerektirir; lutfen kurumsal hesabinizla giris yapin.</p>
+              </div>
+            </header>
+          </section>
+        ) : (
+          <>
+            <section className="stat-grid settings-stats-grid">
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Toplam Firma</span>
+                <strong>{stats.total}</strong>
+                <small>Platformdaki tum kayitli firmalar</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Uretici Firma</span>
+                <strong>{stats.producerCount}</strong>
+                <small>Cam uretici firmalari</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Alici Firma</span>
+                <strong>{stats.buyerCount}</strong>
+                <small>Kendi kaydini olusturan alici firmalar</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Onay Bekleyen</span>
+                <strong>{stats.pendingCount}</strong>
+                <small>Aktivasyon bekleyen veya pasif firmalar</small>
+              </article>
+            </section>
+
+            {feedbackMessage ? <p className="ui-feedback-message settings-feedback-message">{feedbackMessage}</p> : null}
+
+            <section className="glass-card panel settings-filter-panel">
+              <header className="panel-header">
+                <h3>Filtreler</h3>
+              </header>
+              <div className="settings-filter-grid">
+                <label className="settings-filter-field settings-filter-search">
+                  <span>Ara</span>
+                  <input type="search" value={query} placeholder="Firma adi" onChange={(event) => setQuery(event.target.value)} />
+                </label>
+                <label className="settings-filter-field">
+                  <span>Tur</span>
+                  <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}>
+                    <option value="Tumu">Tumu</option>
+                    <option value="Uretici">Uretici</option>
+                    <option value="Alici">Alici</option>
+                  </select>
+                </label>
+                <label className="settings-filter-field">
+                  <span>Durum</span>
+                  <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
+                    <option value="Tumu">Tumu</option>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Pasif">Pasif</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="glass-card panel settings-table-panel">
+              <header className="panel-header settings-table-head">
+                <div>
+                  <h3>Firma Listesi</h3>
+                  <p>{filteredCompanies.length} kayit gosteriliyor</p>
+                </div>
+              </header>
+
+              {companiesState === 'error' ? <p className="ui-feedback-message request-item-feedback">Firmalar yuklenemedi.</p> : null}
+              {companiesState === 'steady' && filteredCompanies.length === 0 ? <p>Kayitli firma bulunamadi.</p> : null}
+
+              {companiesState === 'loading' ? (
+                <p>Yukleniyor...</p>
+              ) : (
+                <div className="table-wrap settings-table-wrap">
+                  <table className="settings-table">
+                    <thead>
+                      <tr>
+                        <th>Firma Adi</th>
+                        <th>Tur</th>
+                        <th>Bolge</th>
+                        <th>Durum</th>
+                        <th>Onay Durumu</th>
+                        <th>Uye Sayisi</th>
+                        <th>Islem</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredCompanies.map((company) => (
+                        <tr key={company.id}>
+                          <td>{company.tradeName || company.legalName}</td>
+                          <td>{isProducerCompany(company) ? 'Uretici' : 'Alici'}</td>
+                          <td>{company.regionId ? regionNameById.get(company.regionId) ?? '-' : '-'}</td>
+                          <td>
+                            <span className={company.status === 'ACTIVE' ? 'status-pill read' : 'status-pill unread'}>
+                              {company.status === 'ACTIVE' ? 'Aktif' : company.status === 'SUSPENDED' ? 'Askida' : 'Pasif'}
+                            </span>
+                          </td>
+                          <td>
+                            {company.verificationStatus === 'VERIFIED'
+                              ? 'Onaylandi'
+                              : company.verificationStatus === 'REJECTED'
+                                ? 'Reddedildi'
+                                : 'Beklemede'}
+                          </td>
+                          <td>{company.memberships.length}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="ghost-btn settings-action-btn"
+                              disabled={togglingCompanyId === company.id}
+                              onClick={() => void handleToggleCompanyStatus(company)}
+                            >
+                              {company.status === 'ACTIVE' ? 'Pasiflestir' : 'Aktiflestir'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        <RequestModal
+          open={Boolean(activeForm)}
+          title="Yeni Uretici Firma"
+          onClose={() => {
+            setFormError('')
+            setActiveForm(null)
+          }}
+          footer={
+            <>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => {
+                  setFormError('')
+                  setActiveForm(null)
+                }}
+              >
+                Iptal
+              </button>
+              <button type="button" className="solid-btn" disabled={isSaving} onClick={() => void handleCreateProducer()}>
+                {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+            </>
+          }
+        >
+          {activeForm ? (
+            <div className="settings-form-grid">
+              <label>
+                Ad Soyad
+                <input type="text" value={activeForm.fullName} onChange={(event) => setActiveForm((current) => (current ? { ...current, fullName: event.target.value } : current))} />
+              </label>
+              <label>
+                E-posta
+                <input type="email" value={activeForm.email} onChange={(event) => setActiveForm((current) => (current ? { ...current, email: event.target.value } : current))} />
+              </label>
+              <label>
+                Telefon
+                <input type="text" value={activeForm.phone} onChange={(event) => setActiveForm((current) => (current ? { ...current, phone: event.target.value } : current))} />
+              </label>
+              <label>
+                Sifre
+                <input
+                  type="password"
+                  value={activeForm.password}
+                  placeholder="Minimum 8 karakter"
+                  onChange={(event) => setActiveForm((current) => (current ? { ...current, password: event.target.value } : current))}
+                />
+              </label>
+              <label className="full-width">
+                Firma Adi
+                <input
+                  type="text"
+                  value={activeForm.companyLegalName}
+                  placeholder="Ornek: Firma Ticaret A.S."
+                  onChange={(event) => setActiveForm((current) => (current ? { ...current, companyLegalName: event.target.value } : current))}
+                />
+              </label>
+              <label className="full-width">
+                Uretim Bolgesi
+                <select
+                  required
+                  value={activeForm.regionId}
+                  onChange={(event) => setActiveForm((current) => (current ? { ...current, regionId: event.target.value } : current))}
+                >
+                  <option value="">Bolge secin</option>
+                  {regions.map((region) => (
+                    <option key={region.id} value={region.id}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {formError ? <p className="settings-form-error full-width">{formError}</p> : null}
+            </div>
+          ) : null}
+        </RequestModal>
       </ScreenStateGate>
     </section>
   )

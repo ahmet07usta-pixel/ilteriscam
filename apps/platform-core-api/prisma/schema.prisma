@@ -218,6 +218,7 @@ model Company {
   legalName              String
   tradeName              String?
   companyType            CompanyType               @default(OTHER)
+  businessDescription    String?
   regionId               String?
   region                 Region?                   @relation(fields: [regionId], references: [id])
   contactEmail           String?
@@ -225,6 +226,7 @@ model Company {
   taxNumber              String?
   verificationStatus     CompanyVerificationStatus @default(PENDING)
   status                 CompanyStatus             @default(ACTIVE)
+  activatedAt            DateTime?
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
   memberships            CompanyUserMembership[]
@@ -581,27 +583,28 @@ model AnalysisResult {
 }
 
 model DetectedMeasurement {
-  id                 String              @id @default(cuid())
-  analysisResultId   String
-  analysisResult     AnalysisResult      @relation(fields: [analysisResultId], references: [id], onDelete: Cascade)
-  ordinal            Int
-  label              String?
-  geometryType       GeometryType
-  widthMm            Decimal?            @db.Decimal(18, 6)
-  heightMm           Decimal?            @db.Decimal(18, 6)
-  lengthMm           Decimal?            @db.Decimal(18, 6)
-  depthMm            Decimal?            @db.Decimal(18, 6)
-  thicknessMm        Decimal?            @db.Decimal(18, 6)
-  quantity           Decimal?            @db.Decimal(18, 6)
-  unit               MeasurementUnit?
-  calculatedAreaM2   Decimal?            @db.Decimal(18, 6)
-  calculatedLengthM  Decimal?            @db.Decimal(18, 6)
-  calculatedVolumeM3 Decimal?            @db.Decimal(18, 6)
-  confidence         Decimal?            @db.Decimal(5, 4)
-  warnings           Json?
-  assumptions        Json?
-  createdAt          DateTime            @default(now())
-  measurementReviews MeasurementReview[]
+  id                   String              @id @default(cuid())
+  analysisResultId     String
+  analysisResult       AnalysisResult      @relation(fields: [analysisResultId], references: [id], onDelete: Cascade)
+  ordinal              Int
+  label                String?
+  suggestedProductType String?
+  geometryType         GeometryType
+  widthMm              Decimal?            @db.Decimal(18, 6)
+  heightMm             Decimal?            @db.Decimal(18, 6)
+  lengthMm             Decimal?            @db.Decimal(18, 6)
+  depthMm              Decimal?            @db.Decimal(18, 6)
+  thicknessMm          Decimal?            @db.Decimal(18, 6)
+  quantity             Decimal?            @db.Decimal(18, 6)
+  unit                 MeasurementUnit?
+  calculatedAreaM2     Decimal?            @db.Decimal(18, 6)
+  calculatedLengthM    Decimal?            @db.Decimal(18, 6)
+  calculatedVolumeM3   Decimal?            @db.Decimal(18, 6)
+  confidence           Decimal?            @db.Decimal(5, 4)
+  warnings             Json?
+  assumptions          Json?
+  createdAt            DateTime            @default(now())
+  measurementReviews   MeasurementReview[]
 
   @@unique([analysisResultId, ordinal])
   @@index([analysisResultId, geometryType])

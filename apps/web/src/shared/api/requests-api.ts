@@ -5,7 +5,9 @@ const requestPath = (requestId: string) => `/requests/${encodeURIComponent(reque
 
 export const requestsApi = {
   list: () => apiRequest<ApiRequest[]>('/requests'),
-  listRecipientCompanies: () => apiRequest<ApiRequestRecipientCompany[]>('/requests/recipient-companies'),
+  listRecipientCompanies: (regionId?: string) => (
+    apiRequest<ApiRequestRecipientCompany[]>(`/requests/recipient-companies${regionId ? `?regionId=${encodeURIComponent(regionId)}` : ''}`)
+  ),
   get: (requestId: string) => apiRequest<ApiRequest>(requestPath(requestId)),
   create: (input: CreateRequestInput) => apiRequest<ApiRequest>('/requests', { method: 'POST', body: input }),
   update: (requestId: string, input: UpdateRequestInput) => (

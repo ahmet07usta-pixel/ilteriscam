@@ -24,6 +24,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const exceptionResponse = isHttpException ? exception.getResponse() : 'Internal server error';
 
+    const message = HttpExceptionFilter.extractMessage(exceptionResponse);
+
     this.logger.error(
       JSON.stringify({
         method: request.method,
@@ -37,7 +39,27 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       path: request.url,
       timestamp: new Date().toISOString(),
+      message,
       error: exceptionResponse,
     });
+  }
+
+  private static extractMessage(exceptionResponse: unknown): string | string[] {
+    if (typeof exceptionResponse === 'string') {
+      return exceptionResponse;
+    }
+
+    if (
+      exceptionResponse &&
+      typeof exceptionResponse === 'object' &&
+      'message' in exceptionResponse
+    ) {
+      const { message } = exceptionResponse as { message: unknown };
+      if (typeof message === 'string' || Array.isArray(message)) {
+        return message;
+      }
+    }
+
+    return 'Unexpected error';
   }
 }

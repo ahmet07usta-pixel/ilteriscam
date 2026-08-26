@@ -105,12 +105,6 @@ export const navByRole: Record<UserRole, ViewDef[]> = {
   ],
   ADMIN: [
     { key: 'dashboard', label: 'Kontrol Paneli' },
-    { key: 'requests', label: 'Talepler' },
-    { key: 'offers', label: 'Teklifler' },
-    { key: 'orders', label: 'Siparisler' },
-    { key: 'pricing', label: 'Fiyat ve Urun Yonetimi' },
-    { key: 'production', label: 'Uretim Takibi' },
-    { key: 'shipment', label: 'Sevkiyat' },
     { key: 'messages', label: 'Mesajlar' },
     { key: 'alerts', label: 'Bildirimler' },
     { key: 'companies', label: 'Firmalar' },
@@ -121,10 +115,7 @@ export const navByRole: Record<UserRole, ViewDef[]> = {
 
 // Override table for splitting screen (read) from action (write) rights; a missing entry falls back to navByRole.
 export const viewPermissionsByRole: Partial<Record<UserRole, Partial<Record<ViewKey, ViewPermission>>>> = {
-  // The platform operator observes manufacturer-owned commercial data instead of editing it.
-  ADMIN: {
-    pricing: { read: true, write: false },
-  },
+  ADMIN: {},
   MANUFACTURER: {},
   BUYER: {
     production: { read: true, write: false },

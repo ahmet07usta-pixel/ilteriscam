@@ -7,6 +7,8 @@ import {
   AnalysisReviewStatus,
   AttachmentStatus,
   CompanyStatus,
+  MeasurementSource,
+  MeasurementStatus,
   Prisma,
 } from '@prisma/client';
 
@@ -199,6 +201,9 @@ export class AnalysisJobRunner {
           ...this.detectedMeasurementData(measurement),
         })),
       });
+      if (job.requestItemId === null) {
+        await this.createItemsFromMeasurements(transaction, job, result.id, providerResult.measurements);
+      }
       const completed = await transaction.analysisJob.updateMany({
         where: {
           id: job.id,
@@ -270,6 +275,47 @@ export class AnalysisJobRunner {
     return retry ? 'REQUEUED' : 'FAILED';
   }
 
+  // Request-level attachments (no pre-created item) get their items auto-created from the AI results directly.
+  private async createItemsFromMeasurements(
+    transaction: Prisma.TransactionClient,
+    job: LoadedJob,
+    analysisResultId: string,
+    measurements: SuggestedMeasurement[],
+  ): Promise<void> {
+    const lastItem = await transaction.requestItem.findFirst({
+      where: { requestId: job.requestId },
+      orderBy: { lineNumber: 'desc' },
+      select: { lineNumber: true },
+    });
+    let nextLineNumber = (lastItem?.lineNumber ?? 0) + 1;
+
+    for (const measurement of measurements) {
+      const data = this.detectedMeasurementData(measurement);
+      await transaction.requestItem.create({
+        data: {
+          requestId: job.requestId,
+          lineNumber: nextLineNumber,
+          description: measurement.label?.trim() || `AI ile tespit edilen cam ${nextLineNumber}`,
+          productType: measurement.suggestedProductType?.trim() || 'Belirlenecek (AI)',
+          quantity: measurement.quantity ?? 1,
+          unit: measurement.unit,
+          measurementSource: MeasurementSource.AI,
+          measurementStatus: MeasurementStatus.APPROVED,
+          widthMm: data.widthMm,
+          heightMm: data.heightMm,
+          lengthMm: data.lengthMm,
+          depthMm: data.depthMm,
+          thicknessMm: data.thicknessMm,
+          calculatedAreaM2: data.calculatedAreaM2,
+          calculatedLengthM: data.calculatedLengthM,
+          calculatedVolumeM3: data.calculatedVolumeM3,
+          sourceAnalysisResultId: analysisResultId,
+        },
+      });
+      nextLineNumber += 1;
+    }
+  }
+
   private detectedMeasurementData(measurement: SuggestedMeasurement) {
     const calculatedAreaM2 = measurement.widthMm !== undefined && measurement.heightMm !== undefined
       ? this.roundSix(measurement.widthMm * measurement.heightMm / 1_000_000)
@@ -284,6 +330,7 @@ export class AnalysisJobRunner {
       : undefined;
     return {
       label: measurement.label,
+      suggestedProductType: measurement.suggestedProductType,
       geometryType: measurement.geometryType,
       widthMm: measurement.widthMm,
       heightMm: measurement.heightMm,

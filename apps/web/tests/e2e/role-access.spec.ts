@@ -15,6 +15,7 @@ type RouteRule = {
   path: string
   allowedRoles: UserRole[]
   expectsTable?: boolean
+  expectsTableExcludedRoles?: UserRole[]
 }
 
 const ACCESS_DENIED_TEXT = 'Bu sayfaya erişim yetkiniz bulunmamaktadır.'
@@ -48,17 +49,17 @@ const users: Record<UserRole, DemoUser> = {
 
 const routeRules: RouteRule[] = [
   { path: '/app/kontrol-paneli', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'] },
-  { path: '/app/talepler', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'], expectsTable: true },
-  { path: '/app/teklifler', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'], expectsTable: true },
-  { path: '/app/siparisler', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'], expectsTable: true },
-  { path: '/app/fiyat-urun-yonetimi', allowedRoles: ['ADMIN', 'MANUFACTURER'] },
-  { path: '/app/uretim-takibi', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'], expectsTable: true },
-  { path: '/app/sevkiyat', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'], expectsTable: true },
+  { path: '/app/talepler', allowedRoles: ['MANUFACTURER', 'BUYER'], expectsTable: true },
+  { path: '/app/teklifler', allowedRoles: ['MANUFACTURER', 'BUYER'], expectsTable: true },
+  { path: '/app/siparisler', allowedRoles: ['MANUFACTURER', 'BUYER'], expectsTable: true },
+  { path: '/app/fiyat-urun-yonetimi', allowedRoles: ['MANUFACTURER'] },
+  { path: '/app/uretim-takibi', allowedRoles: ['MANUFACTURER', 'BUYER'], expectsTable: true },
+  { path: '/app/sevkiyat', allowedRoles: ['MANUFACTURER', 'BUYER'], expectsTable: true },
   { path: '/app/mesajlar', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'] },
   { path: '/app/bildirimler', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'] },
   { path: '/app/firmalar', allowedRoles: ['ADMIN', 'MANUFACTURER'] },
   { path: '/app/raporlar', allowedRoles: ['ADMIN', 'MANUFACTURER'] },
-  { path: '/app/ayarlar', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'], expectsTable: true },
+  { path: '/app/ayarlar', allowedRoles: ['ADMIN', 'MANUFACTURER', 'BUYER'], expectsTable: true, expectsTableExcludedRoles: ['ADMIN'] },
 ]
 
 async function loginAs(page: Page, role: UserRole): Promise<void> {
@@ -102,7 +103,7 @@ async function assertRoleAwareRoute(page: Page, role: UserRole, route: RouteRule
 
   await expect(deniedMessage).toHaveCount(0)
 
-  if (route.expectsTable) {
+  if (route.expectsTable && !route.expectsTableExcludedRoles?.includes(role)) {
     await assertTableIfVisible(page)
   }
 }

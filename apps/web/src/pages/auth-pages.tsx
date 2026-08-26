@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import type { CompanyType, RegisterAccountInput } from '../shared/api/contracts'
+import type { RegisterAccountInput } from '../shared/api/contracts'
 
 interface AuthPageProps {
   onLogin: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>
@@ -9,15 +9,6 @@ interface AuthPageProps {
 interface RegisterPageProps {
   onRegister: (input: RegisterAccountInput) => Promise<{ success: boolean; error?: string }>
 }
-
-const COMPANY_TYPE_OPTIONS: Array<{ value: CompanyType; label: string }> = [
-  { value: 'ALUMINUM', label: 'Aluminyum Dograma' },
-  { value: 'PVC', label: 'PVC Dograma' },
-  { value: 'BALCONY', label: 'Cam Balkon' },
-  { value: 'FURNITURE', label: 'Mobilya' },
-  { value: 'GLASS_PRODUCER', label: 'Cam Uretici' },
-  { value: 'OTHER', label: 'Diger' },
-]
 
 function isStrongPassword(password: string): boolean {
   return password.length >= 12 && !/\s/.test(password) && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password)
@@ -217,7 +208,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
   const navigate = useNavigate()
   const [companyLegalName, setCompanyLegalName] = useState('')
   const [companyTradeName, setCompanyTradeName] = useState('')
-  const [companyType, setCompanyType] = useState<CompanyType>('ALUMINUM')
+  const [businessDescription, setBusinessDescription] = useState('')
   const [taxNumber, setTaxNumber] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -228,7 +219,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleRegister = async () => {
-    if (!companyLegalName.trim() || !fullName.trim() || !email.trim() || !password) {
+    if (!companyLegalName.trim() || !businessDescription.trim() || !fullName.trim() || !email.trim() || !password) {
       setError('Lutfen zorunlu alanlari doldurun.')
       return
     }
@@ -254,7 +245,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
     const result = await onRegister({
       companyLegalName: companyLegalName.trim(),
       companyTradeName: companyTradeName.trim() || undefined,
-      companyType,
+      businessDescription: businessDescription.trim(),
       taxNumber: taxNumber.trim() || undefined,
       fullName: fullName.trim(),
       email: email.trim(),
@@ -297,14 +288,8 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
             <input type="text" value={companyTradeName} onChange={(event) => setCompanyTradeName(event.target.value)} placeholder="Orn: Ege Aluminyum" />
           </label>
           <label>
-            Firma Turu
-            <select value={companyType} onChange={(event) => setCompanyType(event.target.value as CompanyType)}>
-              {COMPANY_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            Firma Turu / Meslek
+            <input type="text" required value={businessDescription} onChange={(event) => setBusinessDescription(event.target.value)} placeholder="Orn: PVC Dogramaci, Cam Balkon Ustasi, Mobilyaci" />
           </label>
           <label>
             Vergi No (opsiyonel)
