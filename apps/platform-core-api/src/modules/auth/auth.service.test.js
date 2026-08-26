@@ -351,3 +351,41 @@ test('register reports a duplicate email as a conflict without issuing a session
   assert.equal(prisma.state.users.length, 1);
   assert.equal(writes.refreshTokenHashes.length, 1);
 });
+
+function createPasswordResetService({ user, admins }) {
+  const queued = [];
+  const usersService = { findByIdentifier: async () => user };
+  const jwtService = { signAsync: async (payload) => payload.tokenType };
+  const config = { get: () => undefined, getOrThrow: () => 'value' };
+  const rbac = { resolvePermissions: () => [] };
+  const audit = { record: async () => {} };
+  const prisma = { user: { findMany: async () => admins } };
+  const notifications = { queue: async (event) => queued.push(event) };
+  const service = new AuthService(usersService, jwtService, config, rbac, audit, prisma, notifications);
+  return { service, queued };
+}
+
+test('requestPasswordReset notifies every active admin when a known active user is found', async () => {
+  const user = { id: 'user-1', email: 'alici@example.invalid', fullName: 'Alici Kisi', isActive: true };
+  const admins = [{ id: 'admin-1' }, { id: 'admin-2' }];
+  const { service, queued } = createPasswordResetService({ user, admins });
+
+  const result = await service.requestPasswordReset('alici@example.invalid');
+
+  assert.equal(result.acknowledged, true);
+  assert.equal(queued.length, 2);
+  assert.equal(queued[0].userId, 'admin-1');
+  assert.equal(queued[0].type, 'PASSWORD_RESET_REQUESTED');
+  assert.match(queued[0].title, /alici@example\.invalid/);
+  assert.equal(queued[0].payload.targetUserId, 'user-1');
+  assert.equal(queued[1].userId, 'admin-2');
+});
+
+test('requestPasswordReset does not notify anyone for an unknown or inactive identifier', async () => {
+  const { service, queued } = createPasswordResetService({ user: null, admins: [{ id: 'admin-1' }] });
+
+  const result = await service.requestPasswordReset('nobody@example.invalid');
+
+  assert.equal(result.acknowledged, true);
+  assert.equal(queued.length, 0);
+});

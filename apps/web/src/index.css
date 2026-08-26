@@ -3091,6 +3091,24 @@ button:focus {
   color: var(--text-secondary);
 }
 
+.admin-member-password-reset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.admin-member-password-reset input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.admin-member-password-reset p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .settings-feedback-message {
   margin: -0.12rem 0 0.1rem;
 }

@@ -10,6 +10,10 @@ interface RegisterPageProps {
   onRegister: (input: RegisterAccountInput) => Promise<{ success: boolean; error?: string }>
 }
 
+interface ForgotPasswordPageProps {
+  onRequestPasswordReset: (identifier: string) => Promise<{ success: boolean; error?: string }>
+}
+
 function isStrongPassword(password: string): boolean {
   return password.length >= 12 && !/\s/.test(password) && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password)
 }
@@ -331,24 +335,60 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
   )
 }
 
-export function ForgotPasswordPage() {
+export function ForgotPasswordPage({ onRequestPasswordReset }: ForgotPasswordPageProps) {
+  const [identifier, setIdentifier] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [feedback, setFeedback] = useState('')
+  const [error, setError] = useState('')
+
+  const handleSubmit = async () => {
+    if (!identifier.trim()) {
+      setError('Lutfen kurumsal e-posta adresinizi girin.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError('')
+    setFeedback('')
+
+    const result = await onRequestPasswordReset(identifier)
+
+    setIsSubmitting(false)
+
+    if (!result.success) {
+      setError(result.error ?? 'Talep gonderilemedi. Lutfen tekrar deneyin.')
+      return
+    }
+
+    setFeedback('Talebiniz alindi. Hesabiniz bulunuyorsa yoneticimiz sizinle iletisime gecerek sifrenizi sifirlayacaktir.')
+  }
+
   return (
     <main className="auth-layout">
       <section className="glass-card auth-card">
         <div>
           <p className="eyebrow">Hesap Kurtarma</p>
-          <h1>Sifre yenileme baglantisi al</h1>
+          <h1>Sifre yenileme talebi gonder</h1>
           <p>
-            Kurumsal e-posta adresinize guvenli bir sifre yenileme baglantisi gonderecegiz.
+            Kurumsal e-posta adresinizi girin; talebiniz platform yoneticisine iletilir ve yoneticimiz sizinle iletisime gecerek sifrenizi sifirlar.
           </p>
         </div>
-        <form className="auth-form">
+        {feedback ? <p className="ui-feedback-message">{feedback}</p> : null}
+        {error ? <p className="ui-feedback-message settings-form-error">{error}</p> : null}
+        <form
+          className="auth-form"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault()
+            void handleSubmit()
+          }}
+        >
           <label>
             Kurumsal e-posta
-            <input type="email" required placeholder="ad@firma.com" />
+            <input type="email" required value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="ad@firma.com" />
           </label>
-          <button type="submit" className="solid-btn">
-            Yenileme baglantisi gonder
+          <button type="submit" className="solid-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Gonderiliyor...' : 'Sifirlama talebi gonder'}
           </button>
         </form>
         <Link to="/login" className="inline-link">

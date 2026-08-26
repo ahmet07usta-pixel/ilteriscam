@@ -47,6 +47,7 @@ import { quotationCalculationsApi } from '../shared/api/quotation-calculations-a
 import { ordersApi } from '../shared/api/orders-api'
 import { productionsApi } from '../shared/api/productions-api'
 import { shipmentsApi } from '../shared/api/shipments-api'
+import { rotateUserPassword } from '../shared/data/auth'
 import type { ViewKey } from '../shared/data/navigation'
 import { canWriteView } from '../shared/data/navigation'
 import { DeleteConfirmationModal, Pagination } from '../shared/ui/global-components'
@@ -7279,6 +7280,10 @@ function daysSince(iso: string | null): number | null {
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
 }
 
+function isStrongPasswordValue(password: string): boolean {
+  return password.length >= 12 && !/\s/.test(password) && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password)
+}
+
 function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps) {
   const apiEnabled = Boolean(currentUser?.backendRole)
 
@@ -7291,6 +7296,20 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
   const [regionFilter, setRegionFilter] = useState('Tumu')
   const [statusFilter, setStatusFilter] = useState<'Tumu' | 'Aktif' | 'Pasif'>('Tumu')
   const [viewCompany, setViewCompany] = useState<ApiCompany | null>(null)
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null)
+  const [newPasswordDraft, setNewPasswordDraft] = useState('')
+  const [isRotatingPassword, setIsRotatingPassword] = useState(false)
+  const [resetPasswordFeedback, setResetPasswordFeedback] = useState('')
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+
+  useEffect(() => {
+    if (!feedbackMessage) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => setFeedbackMessage(''), 2600)
+    return () => window.clearTimeout(timeoutId)
+  }, [feedbackMessage])
 
   const loadAll = useCallback(async () => {
     setLoadState('loading')
@@ -7317,6 +7336,32 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
 
   const regionNameById = useMemo(() => new Map(regions.map((region) => [region.id, region.name])), [regions])
   const userById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users])
+
+  const handleStartPasswordReset = (userId: string) => {
+    setResetPasswordUserId(userId)
+    setNewPasswordDraft('')
+    setResetPasswordFeedback('')
+  }
+
+  const handleConfirmPasswordReset = async (userId: string) => {
+    if (!isStrongPasswordValue(newPasswordDraft)) {
+      setResetPasswordFeedback('Sifre en az 12 karakter olmali, buyuk/kucuk harf ve rakam icermeli, bosluk barindirmamalidir.')
+      return
+    }
+
+    setIsRotatingPassword(true)
+    const result = await rotateUserPassword(userId, newPasswordDraft)
+    setIsRotatingPassword(false)
+
+    if (!result.success) {
+      setResetPasswordFeedback(result.error ?? 'Sifre guncellenemedi.')
+      return
+    }
+
+    setResetPasswordUserId(null)
+    setNewPasswordDraft('')
+    setFeedbackMessage('Kullanicinin sifresi guncellendi. Yeni sifreyi kullaniciya iletmeyi unutmayin.')
+  }
 
   const filteredCompanies = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -7351,6 +7396,8 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
             </div>
           </header>
         </section>
+
+        {feedbackMessage ? <p className="ui-feedback-message settings-feedback-message">{feedbackMessage}</p> : null}
 
         {!apiEnabled ? (
           <section className="glass-card panel settings-table-panel">
@@ -7531,6 +7578,37 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
                           <strong>{user?.fullName ?? 'Bilinmeyen kullanici'}</strong>
                           <span>{user?.email ?? membership.userId}</span>
                           <span>{membership.role} - {membership.status === 'ACTIVE' ? 'Aktif' : 'Pasif'}</span>
+                          {resetPasswordUserId === membership.userId ? (
+                            <div className="admin-member-password-reset">
+                              <input
+                                type="password"
+                                value={newPasswordDraft}
+                                onChange={(event) => setNewPasswordDraft(event.target.value)}
+                                placeholder="Yeni sifre (min. 12 karakter)"
+                              />
+                              <button
+                                type="button"
+                                className="solid-btn"
+                                disabled={isRotatingPassword}
+                                onClick={() => void handleConfirmPasswordReset(membership.userId)}
+                              >
+                                {isRotatingPassword ? 'Kaydediliyor...' : 'Onayla'}
+                              </button>
+                              <button
+                                type="button"
+                                className="ghost-btn"
+                                disabled={isRotatingPassword}
+                                onClick={() => { setResetPasswordUserId(null); setNewPasswordDraft(''); setResetPasswordFeedback('') }}
+                              >
+                                Vazgec
+                              </button>
+                              {resetPasswordFeedback ? <p className="ui-feedback-message settings-form-error">{resetPasswordFeedback}</p> : null}
+                            </div>
+                          ) : (
+                            <button type="button" className="ghost-btn settings-action-btn" onClick={() => handleStartPasswordReset(membership.userId)}>
+                              Sifre Sifirla
+                            </button>
+                          )}
                         </li>
                       )
                     })}

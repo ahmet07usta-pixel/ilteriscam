@@ -13,6 +13,7 @@ import { randomBytes } from 'node:crypto';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RbacService } from '../rbac/rbac.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -28,6 +29,7 @@ export class AuthService {
     private readonly rbacService: RbacService,
     private readonly auditService: AuditService,
     private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async login(
@@ -321,7 +323,28 @@ export class AuthService {
       metadata: { acknowledged: true },
     });
 
+    await this.notifyAdminsOfPasswordResetRequest(user);
+
     return { acknowledged: true };
+  }
+
+  private async notifyAdminsOfPasswordResetRequest(user: User): Promise<void> {
+    const admins = await this.prisma.user.findMany({
+      where: { role: Role.ADMIN, isActive: true },
+      select: { id: true },
+    });
+
+    await Promise.all(
+      admins.map((admin) =>
+        this.notificationsService.queue({
+          userId: admin.id,
+          type: 'PASSWORD_RESET_REQUESTED',
+          title: `Sifre sifirlama talebi: ${user.email}`,
+          body: `${user.fullName} (${user.email}) hesabi icin sifre sifirlama talep etti. Kullanicilar/Firmalar bolumunden yeni bir sifre belirleyebilirsiniz.`,
+          payload: { targetUserId: user.id, email: user.email },
+        }),
+      ),
+    );
   }
 
   async revokeSession(

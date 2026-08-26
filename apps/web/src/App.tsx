@@ -20,7 +20,7 @@ import {
   type WorkflowActions,
   type WorkflowStore,
 } from './pages/workspace-pages'
-import { loginWithIdentifier, logoutFromBackend, registerCompanyAccount } from './shared/data/auth'
+import { loginWithIdentifier, logoutFromBackend, registerCompanyAccount, requestPasswordReset } from './shared/data/auth'
 import { apiRequest, AUTH_EXPIRED_EVENT } from './shared/api/http-client'
 import { notificationsApi } from './shared/api/notifications-api'
 import { notifications as sourceNotifications } from './shared/data/mock'
@@ -1274,6 +1274,7 @@ function App() {
         onDismissToast={(id) => setActiveToasts((current) => current.filter((item) => item.id !== id))}
         onLogin={handleLogin}
         onRegister={handleRegister}
+        onRequestPasswordReset={requestPasswordReset}
         onLogout={handleLogout}
         onRetryState={handleRetryState}
         workflow={workflow}

@@ -42,6 +42,7 @@ interface AppRouterProps {
   onDismissToast: (id: string) => void
   onLogin: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>
   onRegister: (input: RegisterAccountInput) => Promise<{ success: boolean; error?: string }>
+  onRequestPasswordReset: (identifier: string) => Promise<{ success: boolean; error?: string }>
   onLogout: () => void
   onRetryState: () => void
   workflow: WorkflowStore
@@ -65,6 +66,7 @@ export function AppRouter({
   onDismissToast,
   onLogin,
   onRegister,
+  onRequestPasswordReset,
   onLogout,
   onRetryState,
   workflow,
@@ -142,7 +144,7 @@ export function AppRouter({
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <LoginPage onLogin={onLogin} />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <RegisterPage onRegister={onRegister} />} />
-      <Route path="/forgot-password" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <ForgotPasswordPage />} />
+      <Route path="/forgot-password" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <ForgotPasswordPage onRequestPasswordReset={onRequestPasswordReset} />} />
       {isAuthenticated ? (
         <>
           <Route path="/app" element={<Navigate to={defaultPath} replace />} />

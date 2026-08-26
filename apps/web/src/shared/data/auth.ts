@@ -176,3 +176,31 @@ export async function logoutFromBackend(): Promise<void> {
     setAccessToken(null)
   }
 }
+
+export async function requestPasswordReset(identifier: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiRequest<{ acknowledged: true }>('/auth/password/reset/request', {
+      method: 'POST',
+      body: { identifier: identifier.trim().toLowerCase() },
+      skipAuthRefresh: true,
+    })
+    return { success: true }
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return { success: false, error: 'Sunucuya ulasilamadi. Lutfen daha sonra tekrar deneyin.' }
+    }
+    return { success: false, error: error instanceof ApiError ? error.message : 'Talep gonderilemedi. Lutfen tekrar deneyin.' }
+  }
+}
+
+export async function rotateUserPassword(targetUserId: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiRequest<{ success: true }>('/auth/password/rotate', {
+      method: 'POST',
+      body: { targetUserId, newPassword },
+    })
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error instanceof ApiError ? error.message : 'Sifre guncellenemedi. Lutfen tekrar deneyin.' }
+  }
+}
