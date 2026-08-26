@@ -4055,6 +4055,22 @@ th {
   transform: translateY(-1px);
 }
 
+.password-input-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.password-input-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.password-visibility-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .auth-row {
   display: flex;
   justify-content: flex-end;

@@ -22,6 +22,7 @@ export function LoginPage({ onLogin }: AuthPageProps) {
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [error, setError] = useState('')
 
   const handleLogin = async () => {
@@ -177,6 +178,9 @@ export function LoginPage({ onLogin }: AuthPageProps) {
               <input
                 type="text"
                 required
+                autoCapitalize="off"
+                autoCorrect="off"
+                autoComplete="username"
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 placeholder="ornek: ad@firma.com veya +905XXXXXXXXX"
@@ -184,7 +188,21 @@ export function LoginPage({ onLogin }: AuthPageProps) {
             </label>
             <label>
               Sifre
-              <input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Minimum 8 karakter" />
+              <div className="password-input-row">
+                <input
+                  type={isPasswordVisible ? 'text' : 'password'}
+                  required
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Minimum 8 karakter"
+                />
+                <button type="button" className="ghost-btn password-visibility-toggle" onClick={() => setIsPasswordVisible((current) => !current)}>
+                  {isPasswordVisible ? 'Gizle' : 'Goster'}
+                </button>
+              </div>
             </label>
             {error ? <p className="ui-feedback-message settings-form-error">{error}</p> : null}
             <div className="auth-row">
@@ -233,12 +251,14 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
       return
     }
 
-    if (password !== confirmPassword) {
+    const normalizedPassword = password.trim()
+
+    if (normalizedPassword !== confirmPassword.trim()) {
       setError('Sifreler eslesmiyor.')
       return
     }
 
-    if (!isStrongPassword(password)) {
+    if (!isStrongPassword(normalizedPassword)) {
       setError('Sifre en az 12 karakter olmali, buyuk/kucuk harf ve rakam icermeli, bosluk barindirmamalidir.')
       return
     }
@@ -254,7 +274,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
-      password,
+      password: normalizedPassword,
     })
 
     setIsSubmitting(false)

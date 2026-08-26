@@ -123,7 +123,8 @@ async function resolveAuthenticatedUser(response: AuthResponse): Promise<Authent
 
 export async function loginWithIdentifier(identifier: string, password: string): Promise<LoginResult> {
   const normalizedIdentifier = identifier.trim().toLowerCase()
-  if (!normalizedIdentifier || !password.trim()) {
+  const normalizedPassword = password.trim()
+  if (!normalizedIdentifier || !normalizedPassword) {
     return {
       success: false,
       error: 'E-posta veya telefon ve sifre zorunludur.',
@@ -133,7 +134,7 @@ export async function loginWithIdentifier(identifier: string, password: string):
   try {
     const response = await apiRequest<AuthResponse>('/auth/login', {
       method: 'POST',
-      body: { identifier: normalizedIdentifier, password },
+      body: { identifier: normalizedIdentifier, password: normalizedPassword },
       skipAuthRefresh: true,
     })
     setAccessToken(response.accessToken)
