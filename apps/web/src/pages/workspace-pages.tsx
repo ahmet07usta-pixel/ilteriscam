@@ -8358,7 +8358,153 @@ function LegacyFirmalarPage({ state, onRetry, currentUser, role }: WorkspacePage
 }
 
 export function RaporlarPage(props: WorkspacePageProps) {
-  return props.role === 'ADMIN' ? <AdminReportsPage {...props} /> : <LegacyRaporlarPage {...props} />
+  if (props.role === 'ADMIN') {
+    return <AdminReportsPage {...props} />
+  }
+  return props.currentUser?.backendRole ? <CompanyReportsPage {...props} /> : <LegacyRaporlarPage {...props} />
+}
+
+function CompanyReportsPage({ state, onRetry }: WorkspacePageProps) {
+  const [requests, setRequests] = useState<ApiRequest[]>([])
+  const [quotations, setQuotations] = useState<ApiQuotation[]>([])
+  const [orders, setOrders] = useState<ApiOrderView[]>([])
+  const [productions, setProductions] = useState<ApiProductionView[]>([])
+  const [shipments, setShipments] = useState<ApiShipmentView[]>([])
+  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'steady' | 'error'>('idle')
+
+  const loadAll = useCallback(async () => {
+    setLoadState('loading')
+    try {
+      const [requestsData, quotationsData, ordersData, productionsData, shipmentsData] = await Promise.all([
+        requestsApi.list(),
+        quotationsApi.list(),
+        ordersApi.list(),
+        productionsApi.list(),
+        shipmentsApi.list(),
+      ])
+      setRequests(requestsData)
+      setQuotations(quotationsData)
+      setOrders(ordersData)
+      setProductions(productionsData)
+      setShipments(shipmentsData)
+      setLoadState('steady')
+    } catch {
+      setLoadState('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadAll()
+  }, [loadAll])
+
+  const quotationStatusBreakdown = useMemo(() => {
+    const counts = new Map<ApiQuotationStatus, number>()
+    quotations.forEach((quotation) => {
+      counts.set(quotation.status, (counts.get(quotation.status) ?? 0) + 1)
+    })
+    return Array.from(counts.entries()).map(([statusKey, count]) => ({ statusKey, count }))
+  }, [quotations])
+
+  const orderStatusBreakdown = useMemo(() => {
+    const counts = new Map<ApiOrderStatus, number>()
+    orders.forEach((order) => {
+      counts.set(order.status, (counts.get(order.status) ?? 0) + 1)
+    })
+    return Array.from(counts.entries()).map(([statusKey, count]) => ({ statusKey, count }))
+  }, [orders])
+
+  const totalAcceptedAmount = useMemo(
+    () => orders.reduce((sum, order) => sum + Number(order.totalAmount ?? 0), 0),
+    [orders],
+  )
+
+  return (
+    <section className="workspace-main dashboard-main settings-page">
+      <ScreenStateGate state={state} onRetry={onRetry}>
+        <section className="settings-header-row">
+          <header className="workspace-header glass-card dashboard-hero settings-hero">
+            <div>
+              <p className="eyebrow">Firma Raporlari</p>
+              <h2>Kendi Firmama Ait Rapor</h2>
+              <p>Kendi taleplerinize, tekliflerinize, siparislerinize ait gercek verilere dayali ozet.</p>
+            </div>
+          </header>
+        </section>
+
+        {loadState === 'error' ? (
+          <section className="glass-card panel settings-table-panel">
+            <p className="ui-feedback-message request-item-feedback">Raporlar yuklenemedi.</p>
+            <button type="button" className="ghost-btn" onClick={() => void loadAll()}>Yeniden dene</button>
+          </section>
+        ) : (
+          <>
+            <section className="stat-grid settings-stats-grid">
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Toplam Talep</span>
+                <strong>{requests.length}</strong>
+                <small>Gercek veri</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Toplam Teklif</span>
+                <strong>{quotations.length}</strong>
+                <small>Gercek veri</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Toplam Siparis</span>
+                <strong>{orders.length}</strong>
+                <small>Gercek veri</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Devam Eden Uretim</span>
+                <strong>{productions.filter((item) => item.status === 'IN_PROGRESS' || item.status === 'PLANNED').length}</strong>
+                <small>Aktif is emirleri</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Yoldaki Sevkiyat</span>
+                <strong>{shipments.filter((item) => item.status === 'IN_TRANSIT').length}</strong>
+                <small>Teslimat bekleyen</small>
+              </article>
+              <article className="glass-card stat-card settings-stat-card">
+                <span>Siparis Toplam Tutar</span>
+                <strong>{totalAcceptedAmount.toLocaleString('tr-TR')} TRY</strong>
+                <small>Kabul edilen siparisler</small>
+              </article>
+            </section>
+
+            <section className="glass-card panel">
+              <header className="panel-header">
+                <h3>Teklif Durum Dagilimi</h3>
+              </header>
+              <div className="request-detail-grid">
+                {quotationStatusBreakdown.length === 0 ? <p>Henuz teklif yok.</p> : null}
+                {quotationStatusBreakdown.map(({ statusKey, count }) => (
+                  <article key={statusKey} className="request-detail-card">
+                    <span>{QUOTATION_STATUS_LABELS[statusKey]}</span>
+                    <strong>{count}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="glass-card panel">
+              <header className="panel-header">
+                <h3>Siparis Durum Dagilimi</h3>
+              </header>
+              <div className="request-detail-grid">
+                {orderStatusBreakdown.length === 0 ? <p>Henuz siparis yok.</p> : null}
+                {orderStatusBreakdown.map(({ statusKey, count }) => (
+                  <article key={statusKey} className="request-detail-card">
+                    <span>{ORDER_STATUS_LABELS[statusKey]}</span>
+                    <strong>{count}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+      </ScreenStateGate>
+    </section>
+  )
 }
 
 function LegacyRaporlarPage({ state, onRetry, currentUser, role, workflow }: WorkspacePageProps) {
