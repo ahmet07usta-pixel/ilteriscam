@@ -33,6 +33,39 @@ export interface ApiNotification {
   updatedAt: string
 }
 
+export interface ApiMessage {
+  id: string
+  requestId: string
+  counterpartyCompanyId: string
+  senderCompanyId: string
+  authorUserId: string
+  author: { id: string; fullName: string; email: string }
+  body: string
+  createdAt: string
+}
+
+export interface ApiConversationCompanyRef {
+  id: string
+  legalName: string
+  tradeName: string | null
+}
+
+export interface ApiConversation {
+  requestId: string
+  requestNumber: string | null
+  requestTitle: string | null
+  buyerCompany: ApiConversationCompanyRef | null
+  counterpartyCompanyId: string
+  counterpartyCompany: ApiConversationCompanyRef | null
+  lastMessage: ApiMessage | null
+  messageCount: number
+}
+
+export interface CreateMessageInput {
+  counterpartyCompanyId: string
+  body: string
+}
+
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   DRAFT: 'Bekleyen',
   OPEN_FOR_QUOTATION: 'Teklif Hazirlaniyor',

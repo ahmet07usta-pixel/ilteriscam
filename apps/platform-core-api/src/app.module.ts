@@ -30,6 +30,7 @@ import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { UsersModule } from './modules/users/users.module';
 import { CompanyFoundationModule } from './modules/company-foundation/company-foundation.module';
 import { ManufacturerCustomersModule } from './modules/manufacturer-customers/manufacturer-customers.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -67,6 +68,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ProductionsModule,
     ShipmentsModule,
     ManufacturerCustomersModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [

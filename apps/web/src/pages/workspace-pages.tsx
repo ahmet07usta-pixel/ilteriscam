@@ -20,6 +20,9 @@ import type {
   PriceCatalogStatus,
   ApiManufacturerCustomer,
   ApiNotification,
+  ApiMessage,
+  ApiConversation,
+  ApiConversationCompanyRef,
   ApiRegion,
   AttachmentStatus,
   CreateRequestItemInput,
@@ -47,6 +50,7 @@ import { quotationCalculationsApi } from '../shared/api/quotation-calculations-a
 import { ordersApi } from '../shared/api/orders-api'
 import { productionsApi } from '../shared/api/productions-api'
 import { shipmentsApi } from '../shared/api/shipments-api'
+import { messagesApi } from '../shared/api/messages-api'
 import { rotateUserPassword } from '../shared/data/auth'
 import type { ViewKey } from '../shared/data/navigation'
 import { canWriteView } from '../shared/data/navigation'
@@ -6946,12 +6950,17 @@ function matchesAudience(activity: WorkflowActivity, role: UserRole, currentUser
   return toComparable(activity.audienceCompany) === toComparable(currentUser?.company ?? '')
 }
 
-export function MesajlarPage({ state, onRetry, role, currentUser, workflow, workflowActions, activityReadIds, onMarkActivityRead, onMarkAllActivitiesRead }: WorkspacePageProps) {
-  const items = workflow.activityLog.filter((item) => item.channel === 'message' && matchesAudience(item, role, currentUser))
+export function MesajlarPage(props: WorkspacePageProps) {
+  return props.currentUser?.backendRole ? <ApiMesajlarPage state={props.state} onRetry={props.onRetry} /> : <LegacyMesajlarPage {...props} />
+}
+
+function LegacyMesajlarPage({ state, onRetry, role, currentUser, workflow, workflowActions, activityReadIds, onMarkActivityRead, onMarkAllActivitiesRead }: WorkspacePageProps) {
   const [isComposeOpen, setComposeOpen] = useState(false)
   const [audience, setAudience] = useState<'ADMIN' | 'MANUFACTURER' | 'BUYER'>('MANUFACTURER')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+
+  const items = workflow.activityLog.filter((item) => item.channel === 'message' && matchesAudience(item, role, currentUser))
 
   const unreadCount = items.filter((item) => !activityReadIds.includes(item.id)).length
 
@@ -7057,6 +7066,162 @@ export function MesajlarPage({ state, onRetry, role, currentUser, workflow, work
             </label>
           </div>
         </RequestModal>
+      </ScreenStateGate>
+    </section>
+  )
+}
+
+function conversationCompanyLabel(company: ApiConversationCompanyRef | null): string {
+  if (!company) return 'Bilinmeyen firma'
+  return company.tradeName || company.legalName
+}
+
+function ApiMesajlarPage({ state, onRetry }: Pick<WorkspacePageProps, 'state' | 'onRetry'>) {
+  const [conversations, setConversations] = useState<ApiConversation[]>([])
+  const [loadState, setLoadState] = useState<'idle' | 'loading' | 'steady' | 'error'>('idle')
+  const [selected, setSelected] = useState<{ requestId: string; counterpartyCompanyId: string } | null>(null)
+  const [thread, setThread] = useState<ApiMessage[]>([])
+  const [threadLoadState, setThreadLoadState] = useState<'idle' | 'loading' | 'steady' | 'error'>('idle')
+  const [draft, setDraft] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+
+  const loadConversations = useCallback(async () => {
+    setLoadState('loading')
+    try {
+      const data = await messagesApi.listConversations()
+      setConversations(data)
+      setLoadState('steady')
+    } catch {
+      setLoadState('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadConversations()
+  }, [loadConversations])
+
+  const loadThread = useCallback(async (requestId: string, counterpartyCompanyId: string) => {
+    setThreadLoadState('loading')
+    try {
+      const data = await messagesApi.listThread(requestId, counterpartyCompanyId)
+      setThread(data)
+      setThreadLoadState('steady')
+    } catch {
+      setThreadLoadState('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!feedbackMessage) {
+      return
+    }
+    const timeoutId = window.setTimeout(() => setFeedbackMessage(''), 2600)
+    return () => window.clearTimeout(timeoutId)
+  }, [feedbackMessage])
+
+  const handleSelectConversation = (conversation: ApiConversation) => {
+    const next = { requestId: conversation.requestId, counterpartyCompanyId: conversation.counterpartyCompanyId }
+    setSelected(next)
+    void loadThread(next.requestId, next.counterpartyCompanyId)
+  }
+
+  const handleSendMessage = async () => {
+    if (!selected || !draft.trim()) {
+      return
+    }
+
+    setIsSending(true)
+    try {
+      await messagesApi.send(selected.requestId, {
+        counterpartyCompanyId: selected.counterpartyCompanyId,
+        body: draft.trim(),
+      })
+      setDraft('')
+      await loadThread(selected.requestId, selected.counterpartyCompanyId)
+      await loadConversations()
+    } catch (error) {
+      setFeedbackMessage(error instanceof ApiError ? error.message : 'Mesaj gonderilemedi.')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  return (
+    <section className="workspace-main dashboard-main">
+      <ScreenStateGate state={state} onRetry={onRetry}>
+        <header className="workspace-header glass-card dashboard-hero">
+          <div>
+            <p className="eyebrow">Mesaj Merkezi</p>
+            <h2>Talep Bazli Mesajlasma</h2>
+            <p>Her talep icin karsi tarafla (alici/uretici) ozel olarak mesajlasin; rakip firmalar birbirinin yazismasini goremez.</p>
+          </div>
+        </header>
+
+        {feedbackMessage ? <p className="ui-feedback-message settings-form-error">{feedbackMessage}</p> : null}
+
+        <section className="messages-layout glass-card panel">
+          <aside className="messages-conversation-list">
+            <header className="panel-header">
+              <h3>Konusmalar</h3>
+            </header>
+            {loadState === 'loading' ? <p>Yukleniyor...</p> : null}
+            {loadState === 'error' ? <p className="ui-feedback-message settings-form-error">Konusmalar yuklenemedi.</p> : null}
+            {loadState === 'steady' && conversations.length === 0 ? <p>Henuz bir konusma yok.</p> : null}
+            <ul className="messages-conversation-items">
+              {conversations.map((conversation) => {
+                const isActive = selected?.requestId === conversation.requestId && selected?.counterpartyCompanyId === conversation.counterpartyCompanyId
+                return (
+                  <li key={`${conversation.requestId}:${conversation.counterpartyCompanyId}`}>
+                    <button
+                      type="button"
+                      className={isActive ? 'messages-conversation-item active' : 'messages-conversation-item'}
+                      onClick={() => handleSelectConversation(conversation)}
+                    >
+                      <strong>{conversationCompanyLabel(conversation.counterpartyCompany)}</strong>
+                      <span>{conversation.requestNumber} - {conversation.requestTitle}</span>
+                      {conversation.lastMessage ? <p>{conversation.lastMessage.body}</p> : <p>Henuz mesaj yok</p>}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </aside>
+
+          <div className="messages-thread">
+            {!selected ? (
+              <p>Mesajlasmak icin soldan bir konusma secin.</p>
+            ) : (
+              <>
+                <header className="panel-header">
+                  <h3>{conversationCompanyLabel(conversations.find((c) => c.requestId === selected.requestId && c.counterpartyCompanyId === selected.counterpartyCompanyId)?.counterpartyCompany ?? null)}</h3>
+                </header>
+                {threadLoadState === 'loading' ? <p>Yukleniyor...</p> : null}
+                {threadLoadState === 'error' ? <p className="ui-feedback-message settings-form-error">Mesajlar yuklenemedi.</p> : null}
+                <div className="messages-thread-items">
+                  {thread.map((message) => (
+                    <article key={message.id} className="messages-thread-item">
+                      <strong>{message.author.fullName}</strong>
+                      <p>{message.body}</p>
+                      <span>{formatApiDate(message.createdAt)}</span>
+                    </article>
+                  ))}
+                </div>
+                <div className="messages-compose-row">
+                  <textarea
+                    rows={2}
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder="Mesajinizi yazin..."
+                  />
+                  <button type="button" className="solid-btn" disabled={isSending || !draft.trim()} onClick={() => void handleSendMessage()}>
+                    {isSending ? 'Gonderiliyor...' : 'Gonder'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
       </ScreenStateGate>
     </section>
   )

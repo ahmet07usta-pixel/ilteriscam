@@ -211,6 +211,7 @@ model User {
   createdCalculations      QuotationCalculation[]  @relation("CalculationCreatedBy")
   createdProductions       Production[]            @relation("ProductionCreatedBy")
   notifications            Notification[]
+  messages                 Message[]
 }
 
 model Company {
@@ -240,6 +241,7 @@ model Company {
   shipments              Shipment[]                @relation("ShipmentManufacturerCompany")
   priceCatalogItems      PriceCatalogItem[]
   manufacturerCustomers  ManufacturerCustomer[]
+  messagesAsCounterparty Message[]
 
   @@index([regionId])
   @@index([verificationStatus])
@@ -312,6 +314,7 @@ model Request {
   attachments        Attachment[]
   analysisJobs       AnalysisJob[]
   calculations       QuotationCalculation[]
+  messages           Message[]
 
   @@index([companyId, status, createdAt])
   @@index([regionId])
@@ -785,6 +788,21 @@ model Notification {
 
   @@index([userId])
   @@index([status])
+}
+
+model Message {
+  id                     String   @id @default(cuid())
+  requestId              String
+  request                Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  counterpartyCompanyId  String
+  counterpartyCompany    Company  @relation(fields: [counterpartyCompanyId], references: [id], onDelete: Cascade)
+  senderCompanyId        String
+  authorUserId           String
+  author                 User     @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+  body                   String
+  createdAt              DateTime @default(now())
+
+  @@index([requestId, counterpartyCompanyId])
 }
 
 model ManufacturerCustomer {
