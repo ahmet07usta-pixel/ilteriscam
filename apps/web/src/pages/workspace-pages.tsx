@@ -18,6 +18,7 @@ import type {
   ApiCompany,
   ApiPriceCatalogItem,
   PriceCatalogStatus,
+  CompanyVerificationStatus,
   ApiManufacturerCustomer,
   ApiNotification,
   ApiMessage,
@@ -7465,6 +7466,7 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
   const [newPasswordDraft, setNewPasswordDraft] = useState('')
   const [isRotatingPassword, setIsRotatingPassword] = useState(false)
   const [resetPasswordFeedback, setResetPasswordFeedback] = useState('')
+  const [isUpdatingVerification, setIsUpdatingVerification] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState('')
 
   useEffect(() => {
@@ -7526,6 +7528,20 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
     setResetPasswordUserId(null)
     setNewPasswordDraft('')
     setFeedbackMessage('Kullanicinin sifresi guncellendi. Yeni sifreyi kullaniciya iletmeyi unutmayin.')
+  }
+
+  const handleUpdateVerificationStatus = async (company: ApiCompany, nextStatus: CompanyVerificationStatus) => {
+    setIsUpdatingVerification(true)
+    try {
+      const updated = await companiesApi.update(company.id, { verificationStatus: nextStatus })
+      setCompanies((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+      setViewCompany((current) => (current && current.id === updated.id ? updated : current))
+      setFeedbackMessage('Firma onay durumu guncellendi.')
+    } catch (error) {
+      setFeedbackMessage(error instanceof ApiError ? error.message : 'Onay durumu guncellenemedi.')
+    } finally {
+      setIsUpdatingVerification(false)
+    }
   }
 
   const filteredCompanies = useMemo(() => {
@@ -7712,6 +7728,38 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
                 <strong>
                   {viewCompany.verificationStatus === 'VERIFIED' ? 'Onaylandi' : viewCompany.verificationStatus === 'REJECTED' ? 'Reddedildi' : 'Beklemede'}
                 </strong>
+                <div className="verification-status-actions">
+                  {viewCompany.verificationStatus !== 'VERIFIED' ? (
+                    <button
+                      type="button"
+                      className="ghost-btn settings-action-btn"
+                      disabled={isUpdatingVerification}
+                      onClick={() => void handleUpdateVerificationStatus(viewCompany, 'VERIFIED')}
+                    >
+                      Onayla
+                    </button>
+                  ) : null}
+                  {viewCompany.verificationStatus !== 'REJECTED' ? (
+                    <button
+                      type="button"
+                      className="ghost-btn settings-action-btn"
+                      disabled={isUpdatingVerification}
+                      onClick={() => void handleUpdateVerificationStatus(viewCompany, 'REJECTED')}
+                    >
+                      Reddet
+                    </button>
+                  ) : null}
+                  {viewCompany.verificationStatus !== 'PENDING' ? (
+                    <button
+                      type="button"
+                      className="ghost-btn settings-action-btn"
+                      disabled={isUpdatingVerification}
+                      onClick={() => void handleUpdateVerificationStatus(viewCompany, 'PENDING')}
+                    >
+                      Beklemeye Al
+                    </button>
+                  ) : null}
+                </div>
               </article>
               <article className="request-detail-card">
                 <span>Aktivasyon Tarihi</span>

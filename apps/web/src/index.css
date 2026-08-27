@@ -3208,6 +3208,13 @@ button:focus {
   margin: 0;
 }
 
+.verification-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+}
+
 .settings-feedback-message {
   margin: -0.12rem 0 0.1rem;
 }
