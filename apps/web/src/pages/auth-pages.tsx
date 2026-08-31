@@ -51,7 +51,7 @@ export function LoginPage({ onLogin }: AuthPageProps) {
         </div>
 
         <div className="showcase-content">
-          <p className="eyebrow">Dijital Cam Platformu</p>
+          <p className="eyebrow">İlteriş Cam Platformu</p>
           <h1>Cam Sektorunun Yeni Nesil B2B Platformu</h1>
           <p className="showcase-copy">
             Cam ureticileri, aluminyum ve PVC dogramacilar, cam balkon ve cephe firmalari ile mobilyacilari tek dijital ticaret merkezinde birlestirir.
@@ -159,7 +159,7 @@ export function LoginPage({ onLogin }: AuthPageProps) {
               </svg>
             </div>
             <div>
-              <p className="eyebrow">Dijital Cam Platformu</p>
+              <p className="eyebrow">İlteriş Cam Platformu</p>
               <h2>Hos geldiniz</h2>
               <p>Kurumsal hesabiniza giris yaparak teklif ve siparis surecini yonetin.</p>
             </div>
@@ -302,7 +302,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
     <main className="auth-layout">
       <section className="glass-card auth-card">
         <div>
-          <p className="eyebrow">Dijital Cam Platformu</p>
+          <p className="eyebrow">İlteriş Cam Platformu</p>
           <h1>Firma hesabinizi olusturun</h1>
           <p>Uretici tekliflerini karsilastirmak ve talep olusturmak icin firma hesabinizi birkac adimda acin.</p>
         </div>

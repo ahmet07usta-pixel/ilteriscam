@@ -296,7 +296,7 @@ export function AppShell({
           <div className="brand sidebar-brand">
             <span className="brand-pill" />
             <div>
-              <strong>Dijital Cam</strong>
+              <strong>İlteriş Cam</strong>
               <p>Ust Duzey Is Platformu</p>
             </div>
           </div>
@@ -372,7 +372,7 @@ export function AppShell({
                 <div className="company-chip" aria-label="Firma Bilgisi">
                   <span className="company-logo" aria-hidden="true">{initials}</span>
                   <div>
-                    <strong>{currentUser?.company ?? 'Dijital Cam Platformu'}</strong>
+                    <strong>{currentUser?.company ?? 'İlteriş Cam Platformu'}</strong>
                     <small>{role === 'ADMIN' ? 'Platform Sahibi' : 'Firma Bilgisi'}</small>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ export function AppShell({
           <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}>
             <aside className="mobile-nav-drawer glass-card" onClick={(event) => event.stopPropagation()} aria-label="Mobil Menu">
               <header>
-                <strong>Dijital Cam</strong>
+                <strong>İlteriş Cam</strong>
                 <button type="button" className="ghost-btn" onClick={() => setMobileNavOpen(false)}>
                   Kapat
                 </button>

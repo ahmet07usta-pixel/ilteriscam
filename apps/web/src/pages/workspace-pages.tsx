@@ -705,7 +705,7 @@ const settingRows: SettingRow[] = [
   { code: 'AYR-5011', name: 'Platform Saat Dilimi', category: 'Genel', value: 'Europe/Istanbul', updatedBy: 'Platform Admin', updatedAt: '07.08.2026', status: 'Aktif' },
   { code: 'AYR-5012', name: 'Bolgesel Format', category: 'Sistem', value: 'tr-TR', updatedBy: 'Platform Admin', updatedAt: '07.08.2026', status: 'Aktif' },
   { code: 'AYR-5013', name: 'Dil Destegi Altyapisi', category: 'Sistem', value: 'tr-TR,en-US,de-DE', updatedBy: 'Platform Admin', updatedAt: '07.08.2026', status: 'Aktif' },
-  { code: 'AYR-5014', name: 'Platform Unvani', category: 'Genel', value: 'Dijital Cam Platformu', updatedBy: 'Platform Admin', updatedAt: '07.08.2026', status: 'Aktif' },
+  { code: 'AYR-5014', name: 'Platform Unvani', category: 'Genel', value: 'İlteriş Cam Platformu', updatedBy: 'Platform Admin', updatedAt: '07.08.2026', status: 'Aktif' },
 ]
 
 const settingCategories: Array<'Tum Kategoriler' | SettingCategory> = ['Tum Kategoriler', 'Genel', 'Guvenlik', 'Bildirim', 'Sistem', 'Kullanici']
