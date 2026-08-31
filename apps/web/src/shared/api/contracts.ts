@@ -141,6 +141,7 @@ export interface ApiCompany {
   contactEmail: string | null
   contactPhone: string | null
   taxNumber: string | null
+  iban: string | null
   activatedAt: string | null
   memberships: ApiMembership[]
 }
@@ -153,6 +154,7 @@ export interface CreateCompanyInput {
   contactEmail?: string
   contactPhone?: string
   taxNumber?: string
+  iban?: string
   verificationStatus?: CompanyVerificationStatus
   status?: CompanyStatus
 }

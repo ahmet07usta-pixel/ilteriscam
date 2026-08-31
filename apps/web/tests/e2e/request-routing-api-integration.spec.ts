@@ -201,7 +201,7 @@ test('routes a submitted buyer request only to its recipient producer; admin no 
   await expect(createModal.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
   expect(createCalls).toBe(0)
 
-  await createModal.getByLabel('Uretici Firma').selectOption(assignedProducer.companyId)
+  await createModal.getByRole('checkbox', { name: assignedProducer.company }).check()
   await createModal.getByRole('button', { name: 'Kaydet' }).click()
 
   // Requests now stay DRAFT after creation; the detail view opens automatically so the buyer can submit explicitly.

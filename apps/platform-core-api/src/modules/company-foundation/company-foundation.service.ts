@@ -63,6 +63,7 @@ export class CompanyFoundationService {
       contactEmail?: string;
       contactPhone?: string;
       taxNumber?: string;
+      iban?: string;
       verificationStatus?: CompanyVerificationStatus;
       status?: CompanyStatus;
     },
@@ -91,9 +92,16 @@ export class CompanyFoundationService {
         contactEmail: input.contactEmail,
         contactPhone: input.contactPhone,
         taxNumber: input.taxNumber,
+        iban: input.iban,
         verificationStatus: input.verificationStatus ?? CompanyVerificationStatus.PENDING,
         status: initialStatus,
         activatedAt: initialStatus === CompanyStatus.ACTIVE ? new Date() : null,
+      },
+      include: {
+        region: true,
+        memberships: {
+          include: { user: { select: { id: true, fullName: true, email: true } } },
+        },
       },
     });
 
@@ -120,6 +128,7 @@ export class CompanyFoundationService {
       contactEmail?: string;
       contactPhone?: string;
       taxNumber?: string;
+      iban?: string;
       verificationStatus?: CompanyVerificationStatus;
       status?: CompanyStatus;
     },
@@ -143,6 +152,12 @@ export class CompanyFoundationService {
     const company = await this.prisma.company.update({
       where: { id: companyId },
       data: activatesNow ? { ...input, activatedAt: new Date() } : input,
+      include: {
+        region: true,
+        memberships: {
+          include: { user: { select: { id: true, fullName: true, email: true } } },
+        },
+      },
     });
 
     if (actor?.sub) {

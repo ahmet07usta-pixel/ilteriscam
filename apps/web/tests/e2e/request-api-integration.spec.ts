@@ -205,7 +205,7 @@ test('binds Request list, detail, create, submit, and cancel without replacing w
   await createModal.locator('label:has-text("Talep Basligi") input').fill('API Created Request')
   await createModal.locator('label:has-text("Aciklama") textarea').fill('Created through requestsApi')
   await createModal.locator('label:has-text("Sorumlu") input').fill(sessionUser.fullName)
-  await createModal.getByLabel('Uretici Firma').selectOption(recipientCompany.id)
+  await createModal.getByRole('checkbox', { name: recipientCompany.tradeName }).check()
   await createModal.locator('.request-modal-actions .solid-btn').click()
 
   // Requests now stay DRAFT after creation; the detail view opens automatically so the buyer can submit explicitly.

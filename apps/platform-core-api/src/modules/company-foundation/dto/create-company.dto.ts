@@ -33,6 +33,11 @@ export class CreateCompanyDto {
   taxNumber?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(34)
+  iban?: string;
+
+  @IsOptional()
   @IsEnum(CompanyVerificationStatus)
   verificationStatus?: CompanyVerificationStatus;
 

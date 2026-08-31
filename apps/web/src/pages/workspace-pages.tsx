@@ -1895,7 +1895,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
   const [apiRows, setApiRows] = useState<RequestRow[]>([])
   const [recipientCompanies, setRecipientCompanies] = useState<ApiRequestRecipientCompany[]>([])
   const [recipientCompaniesState, setRecipientCompaniesState] = useState<'loading' | 'steady' | 'error'>('steady')
-  const [selectedRecipientCompanyId, setSelectedRecipientCompanyId] = useState('')
+  const [selectedRecipientCompanyIds, setSelectedRecipientCompanyIds] = useState<string[]>([])
   const [recipientFeedback, setRecipientFeedback] = useState('')
   const [regions, setRegions] = useState<ApiRegion[]>([])
   const [apiState, setApiState] = useState<ScreenState>('steady')
@@ -2057,7 +2057,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
   }, [requiresRecipientSelection, isCreateFormOpen, activeForm?.regionId])
 
   useEffect(() => {
-    setSelectedRecipientCompanyId('')
+    setSelectedRecipientCompanyIds([])
   }, [activeForm?.regionId])
 
   const requestCompanies = useMemo(() => [
@@ -2117,8 +2117,8 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
         return
       }
 
-      if (!existing && requiresRecipientSelection && !selectedRecipientCompanyId) {
-        setRecipientFeedback('Uretici firma secimi zorunludur, lutfen listeden bir firma secin.')
+      if (!existing && requiresRecipientSelection && selectedRecipientCompanyIds.length === 0) {
+        setRecipientFeedback('En az bir uretici firma secimi zorunludur.')
         return
       }
 
@@ -2167,7 +2167,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
             targetDeliveryDate: toInputDate(activeForm.deliveryDate),
             currency: 'TRY',
             ...(requiresRecipientSelection
-              ? { recipientCompanyIds: [selectedRecipientCompanyId] }
+              ? { recipientCompanyIds: selectedRecipientCompanyIds }
               : {}),
           }
           saved = await requestsApi.create(createPayload)
@@ -2182,7 +2182,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
         })
         setFeedbackMessage(existing ? 'Talep guncellendi.' : 'Talep taslak olarak olusturuldu. Cam kalemlerini (olcu/fotograf) ekleyin, hazir oldugunuzda "Ureticiye Gonder" butonuna basin.')
         setRecipientFeedback('')
-        setSelectedRecipientCompanyId('')
+        setSelectedRecipientCompanyIds([])
         setActiveForm(null)
         if (!existing) {
           void handleViewRequest(mapped)
@@ -2613,7 +2613,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
               type="button"
               className="solid-btn request-create-btn"
               onClick={() => {
-                setSelectedRecipientCompanyId('')
+                setSelectedRecipientCompanyIds([])
                 setRecipientFeedback('')
                 setActiveForm(buildRequestForm(scopedRows, undefined, currentUser?.company ?? ''))
               }}
@@ -2816,12 +2816,12 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
               <button
                 type="button"
                 className="solid-btn"
-                disabled={requiresRecipientSelection && !activeForm?.apiId && (!selectedRecipientCompanyId || recipientCompanies.length === 0)}
+                disabled={requiresRecipientSelection && !activeForm?.apiId && (selectedRecipientCompanyIds.length === 0 || recipientCompanies.length === 0)}
                 title={
                   requiresRecipientSelection && !activeForm?.apiId && recipientCompanies.length === 0
                     ? 'Henuz aktif uretici firma bulunmadigi icin talep olusturulamiyor.'
-                    : requiresRecipientSelection && !activeForm?.apiId && !selectedRecipientCompanyId
-                      ? 'Devam etmek icin bir uretici firma secin.'
+                    : requiresRecipientSelection && !activeForm?.apiId && selectedRecipientCompanyIds.length === 0
+                      ? 'Devam etmek icin en az bir uretici firma secin.'
                       : undefined
                 }
                 onClick={() => void handleSaveRequest()}
@@ -2879,25 +2879,32 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                 </label>
               )}
               {requiresRecipientSelection && !activeForm.apiId && (
-                <label>
-                  Uretici Firma (zorunlu)
-                  <select
-                    required
-                    value={selectedRecipientCompanyId}
-                    disabled={recipientCompaniesState === 'loading' || recipientCompanies.length === 0}
-                    onChange={(event) => {
-                      setSelectedRecipientCompanyId(event.target.value)
-                      setRecipientFeedback('')
-                    }}
-                  >
-                    <option value="">Uretici secin</option>
-                    {recipientCompanies.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.tradeName ?? company.legalName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="request-recipient-picker full-width">
+                  <span className="request-recipient-picker-label">Uretici Firma (zorunlu, birden fazla secilebilir)</span>
+                  {recipientCompaniesState === 'loading' ? (
+                    <p>Yukleniyor...</p>
+                  ) : (
+                    <div className="request-recipient-picker-list">
+                      {recipientCompanies.map((company) => (
+                        <label key={company.id} className="request-recipient-picker-item">
+                          <input
+                            type="checkbox"
+                            checked={selectedRecipientCompanyIds.includes(company.id)}
+                            onChange={(event) => {
+                              setSelectedRecipientCompanyIds((current) =>
+                                event.target.checked
+                                  ? [...current, company.id]
+                                  : current.filter((id) => id !== company.id)
+                              )
+                              setRecipientFeedback('')
+                            }}
+                          />
+                          <span>{company.tradeName ?? company.legalName}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
               {requiresRecipientSelection && recipientCompaniesState === 'error' && (
                 <p className="ui-feedback-message request-item-feedback full-width">Uretici firmalar yuklenemedi.</p>
@@ -7468,6 +7475,17 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
   const [resetPasswordFeedback, setResetPasswordFeedback] = useState('')
   const [isUpdatingVerification, setIsUpdatingVerification] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState('')
+  const [isAddingMember, setIsAddingMember] = useState(false)
+  const [newMemberFullName, setNewMemberFullName] = useState('')
+  const [newMemberEmail, setNewMemberEmail] = useState('')
+  const [newMemberPhone, setNewMemberPhone] = useState('')
+  const [newMemberPassword, setNewMemberPassword] = useState('')
+  const [newMemberError, setNewMemberError] = useState('')
+  const [isSavingMember, setIsSavingMember] = useState(false)
+  const [isEditingIban, setIsEditingIban] = useState(false)
+  const [ibanDraft, setIbanDraft] = useState('')
+  const [isSavingIban, setIsSavingIban] = useState(false)
+  const [ibanError, setIbanError] = useState('')
 
   useEffect(() => {
     if (!feedbackMessage) {
@@ -7541,6 +7559,99 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
       setFeedbackMessage(error instanceof ApiError ? error.message : 'Onay durumu guncellenemedi.')
     } finally {
       setIsUpdatingVerification(false)
+    }
+  }
+
+  const handleStartAddMember = () => {
+    setIsAddingMember(true)
+    setNewMemberFullName('')
+    setNewMemberEmail('')
+    setNewMemberPhone('')
+    setNewMemberPassword('')
+    setNewMemberError('')
+  }
+
+  const handleCancelAddMember = () => {
+    setIsAddingMember(false)
+    setNewMemberError('')
+  }
+
+  const handleConfirmAddMember = async () => {
+    if (!viewCompany) {
+      return
+    }
+
+    const fullName = newMemberFullName.trim()
+    const email = newMemberEmail.trim().toLowerCase()
+    const phone = newMemberPhone.trim()
+
+    if (!fullName || !email || !newMemberPassword) {
+      setNewMemberError('Lutfen ad soyad, e-posta ve sifre alanlarini doldurun.')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setNewMemberError('E-posta adresi gecersiz.')
+      return
+    }
+
+    if (newMemberPassword.length < 8) {
+      setNewMemberError('Sifre en az 8 karakter olmalidir.')
+      return
+    }
+
+    setIsSavingMember(true)
+    setNewMemberError('')
+
+    try {
+      const role = isProducerCompany(viewCompany) ? 'PRODUCER' : 'SALES'
+      const user = await usersApi.create({ fullName, email, phone: phone || undefined, password: newMemberPassword, role })
+      await companiesApi.addMembership(viewCompany.id, user.id, 'MEMBER')
+
+      const refreshedCompany = await companiesApi.get(viewCompany.id)
+      await loadAll()
+      setViewCompany(refreshedCompany)
+      setIsAddingMember(false)
+      setFeedbackMessage('Firmaya yeni kullanici eklendi.')
+    } catch (error) {
+      setNewMemberError(error instanceof ApiError ? error.message : 'Kullanici eklenemedi.')
+    } finally {
+      setIsSavingMember(false)
+    }
+  }
+
+  const handleStartEditIban = () => {
+    if (!viewCompany) {
+      return
+    }
+    setIsEditingIban(true)
+    setIbanDraft(viewCompany.iban ?? '')
+    setIbanError('')
+  }
+
+  const handleCancelEditIban = () => {
+    setIsEditingIban(false)
+    setIbanError('')
+  }
+
+  const handleConfirmEditIban = async () => {
+    if (!viewCompany) {
+      return
+    }
+
+    setIsSavingIban(true)
+    setIbanError('')
+
+    try {
+      const updated = await companiesApi.update(viewCompany.id, { iban: ibanDraft.trim() || undefined })
+      setCompanies((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+      setViewCompany(updated)
+      setIsEditingIban(false)
+      setFeedbackMessage('IBAN bilgisi guncellendi.')
+    } catch (error) {
+      setIbanError(error instanceof ApiError ? error.message : 'IBAN guncellenemedi.')
+    } finally {
+      setIsSavingIban(false)
     }
   }
 
@@ -7669,18 +7780,18 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
                         const activeDays = company.status === 'ACTIVE' ? daysSince(company.activatedAt) : null
                         return (
                           <tr key={company.id}>
-                            <td>{company.tradeName || company.legalName}</td>
-                            <td>{isProducerCompany(company) ? 'Uretici' : 'Alici'}</td>
-                            <td>{company.regionId ? regionNameById.get(company.regionId) ?? '-' : '-'}</td>
-                            <td>
+                            <td data-label="Firma Adi">{company.tradeName || company.legalName}</td>
+                            <td data-label="Tur">{isProducerCompany(company) ? 'Uretici' : 'Alici'}</td>
+                            <td data-label="Bolge">{company.regionId ? regionNameById.get(company.regionId) ?? '-' : '-'}</td>
+                            <td data-label="Durum">
                               <span className={company.status === 'ACTIVE' ? 'status-pill read' : 'status-pill unread'}>
                                 {company.status === 'ACTIVE' ? 'Aktif' : company.status === 'SUSPENDED' ? 'Askida' : 'Pasif'}
                               </span>
                             </td>
-                            <td>{activeDays === null ? '-' : `${activeDays} gundur aktif`}</td>
-                            <td>{company.contactEmail ?? company.contactPhone ?? '-'}</td>
-                            <td>
-                              <button type="button" className="ghost-btn settings-action-btn" onClick={() => setViewCompany(company)}>
+                            <td data-label="Aktivasyon">{activeDays === null ? '-' : `${activeDays} gundur aktif`}</td>
+                            <td data-label="Iletisim">{company.contactEmail ?? company.contactPhone ?? '-'}</td>
+                            <td data-label="Islem">
+                              <button type="button" className="ghost-btn settings-action-btn" onClick={() => { setViewCompany(company); setIsAddingMember(false); setIsEditingIban(false) }}>
                                 Detay
                               </button>
                             </td>
@@ -7778,6 +7889,28 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
                 <span>Vergi No</span>
                 <strong>{viewCompany.taxNumber ?? '-'}</strong>
               </article>
+              <article className="request-detail-card">
+                <span>IBAN</span>
+                {isEditingIban ? (
+                  <div className="admin-member-password-reset">
+                    <input type="text" value={ibanDraft} onChange={(event) => setIbanDraft(event.target.value)} placeholder="TR.." />
+                    <button type="button" className="solid-btn" disabled={isSavingIban} onClick={() => void handleConfirmEditIban()}>
+                      {isSavingIban ? 'Kaydediliyor...' : 'Onayla'}
+                    </button>
+                    <button type="button" className="ghost-btn" disabled={isSavingIban} onClick={handleCancelEditIban}>
+                      Vazgec
+                    </button>
+                    {ibanError ? <p className="ui-feedback-message settings-form-error">{ibanError}</p> : null}
+                  </div>
+                ) : (
+                  <>
+                    <strong>{viewCompany.iban ?? '-'}</strong>
+                    <button type="button" className="ghost-btn settings-action-btn" onClick={handleStartEditIban}>
+                      Duzenle
+                    </button>
+                  </>
+                )}
+              </article>
               <article className="request-detail-card full-width">
                 <span>Uyeler ({viewCompany.memberships.length})</span>
                 {viewCompany.memberships.length === 0 ? (
@@ -7826,6 +7959,25 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
                       )
                     })}
                   </ul>
+                )}
+                {isAddingMember ? (
+                  <div className="admin-member-password-reset">
+                    <input type="text" value={newMemberFullName} onChange={(event) => setNewMemberFullName(event.target.value)} placeholder="Ad Soyad" />
+                    <input type="email" value={newMemberEmail} onChange={(event) => setNewMemberEmail(event.target.value)} placeholder="E-posta" />
+                    <input type="text" value={newMemberPhone} onChange={(event) => setNewMemberPhone(event.target.value)} placeholder="Telefon (opsiyonel)" />
+                    <input type="password" value={newMemberPassword} onChange={(event) => setNewMemberPassword(event.target.value)} placeholder="Sifre (min. 8 karakter)" />
+                    <button type="button" className="solid-btn" disabled={isSavingMember} onClick={() => void handleConfirmAddMember()}>
+                      {isSavingMember ? 'Ekleniyor...' : 'Onayla'}
+                    </button>
+                    <button type="button" className="ghost-btn" disabled={isSavingMember} onClick={handleCancelAddMember}>
+                      Vazgec
+                    </button>
+                    {newMemberError ? <p className="ui-feedback-message settings-form-error">{newMemberError}</p> : null}
+                  </div>
+                ) : (
+                  <button type="button" className="ghost-btn settings-action-btn" onClick={handleStartAddMember}>
+                    + Yeni Kullanici Ekle
+                  </button>
                 )}
               </article>
             </div>
@@ -9120,9 +9272,9 @@ function AdminReportsPage({ state, onRetry, currentUser }: WorkspacePageProps) {
                       <tr><td colSpan={3}>Henuz veri yok.</td></tr>
                     ) : regionBreakdown.map((row) => (
                       <tr key={row.region}>
-                        <td>{row.region}</td>
-                        <td>{row.requestCount}</td>
-                        <td>{row.companyCount}</td>
+                        <td data-label="Bolge">{row.region}</td>
+                        <td data-label="Talep Sayisi">{row.requestCount}</td>
+                        <td data-label="Firma Sayisi">{row.companyCount}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -9881,11 +10033,12 @@ interface NewProducerFormState {
   phone: string
   password: string
   companyLegalName: string
+  iban: string
   regionId: string
 }
 
 function buildNewProducerForm(): NewProducerFormState {
-  return { fullName: '', email: '', phone: '', password: '', companyLegalName: '', regionId: '' }
+  return { fullName: '', email: '', phone: '', password: '', companyLegalName: '', iban: '', regionId: '' }
 }
 
 function isProducerCompany(company: ApiCompany): boolean {
@@ -10017,6 +10170,7 @@ function AdminSettingsPage({ state, onRetry, currentUser }: WorkspacePageProps) 
         companyType: 'GLASS_PRODUCER',
         status: 'INACTIVE',
         regionId: activeForm.regionId,
+        iban: activeForm.iban.trim() || undefined,
       })
 
       const user = await usersApi.create({
@@ -10248,6 +10402,15 @@ function AdminSettingsPage({ state, onRetry, currentUser }: WorkspacePageProps) 
                   value={activeForm.companyLegalName}
                   placeholder="Ornek: Firma Ticaret A.S."
                   onChange={(event) => setActiveForm((current) => (current ? { ...current, companyLegalName: event.target.value } : current))}
+                />
+              </label>
+              <label className="full-width">
+                IBAN (opsiyonel)
+                <input
+                  type="text"
+                  value={activeForm.iban}
+                  placeholder="TR.. (ileride odeme/komisyon aktarimi icin kullanilacak)"
+                  onChange={(event) => setActiveForm((current) => (current ? { ...current, iban: event.target.value } : current))}
                 />
               </label>
               <label className="full-width">

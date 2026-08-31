@@ -225,6 +225,7 @@ model Company {
   contactEmail           String?
   contactPhone           String?
   taxNumber              String?
+  iban                   String?
   verificationStatus     CompanyVerificationStatus @default(PENDING)
   status                 CompanyStatus             @default(ACTIVE)
   activatedAt            DateTime?

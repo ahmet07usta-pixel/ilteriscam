@@ -219,6 +219,11 @@ export function LoginPage({ onLogin }: AuthPageProps) {
                 Kayit Ol
               </Link>
             </p>
+            <p className="legal-links-row">
+              <Link to="/kvkk-aydinlatma-metni" className="inline-link">
+                KVKK Aydinlatma Metni
+              </Link>
+            </p>
           </form>
         </article>
       </section>
@@ -237,12 +242,18 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [hasAcceptedKvkk, setHasAcceptedKvkk] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleRegister = async () => {
     if (!companyLegalName.trim() || !businessDescription.trim() || !fullName.trim() || !email.trim() || !password) {
       setError('Lutfen zorunlu alanlari doldurun.')
+      return
+    }
+
+    if (!hasAcceptedKvkk) {
+      setError('Devam etmek icin KVKK Aydinlatma Metni onayini vermelisiniz.')
       return
     }
 
@@ -339,8 +350,17 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
             Sifre Tekrar
             <input type="password" required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Sifrenizi tekrar girin" />
           </label>
+          <label className="kvkk-consent-row">
+            <input type="checkbox" required checked={hasAcceptedKvkk} onChange={(event) => setHasAcceptedKvkk(event.target.checked)} />
+            <span>
+              <Link to="/kvkk-aydinlatma-metni" target="_blank" rel="noreferrer" className="inline-link">
+                KVKK Aydinlatma Metni
+              </Link>
+              &apos;ni okudum ve kabul ediyorum.
+            </span>
+          </label>
           {error ? <p className="ui-feedback-message settings-form-error">{error}</p> : null}
-          <button type="button" className="solid-btn login-btn" onClick={() => void handleRegister()} disabled={isSubmitting}>
+          <button type="button" className="solid-btn login-btn" onClick={() => void handleRegister()} disabled={isSubmitting || !hasAcceptedKvkk}>
             {isSubmitting ? 'Kaydediliyor...' : 'Hesap Olustur'}
           </button>
           <p className="auth-switch">

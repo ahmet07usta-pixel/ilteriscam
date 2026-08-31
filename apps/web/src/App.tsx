@@ -695,17 +695,21 @@ function App() {
       })
       return next
     })
-    const ids = notifications.map((item, index) =>
-      window.setTimeout(() => {
-        setActiveToasts((current) => [{ ...item, id: `${item.id}-${Date.now()}-${index}` }, ...current].slice(0, 5))
-      }, index * 220),
-    )
+    // Toast popups are a legacy/local-demo affordance only - a real backend session's
+    // notifications already surface through the real bell/notifications feed.
+    const ids = apiEnabled
+      ? []
+      : notifications.map((item, index) =>
+          window.setTimeout(() => {
+            setActiveToasts((current) => [{ ...item, id: `${item.id}-${Date.now()}-${index}` }, ...current].slice(0, 5))
+          }, index * 220),
+        )
     setSeeded(true)
 
     return () => {
       ids.forEach((id) => window.clearTimeout(id))
     }
-  }, [isAuthenticated, notifications, seeded])
+  }, [isAuthenticated, notifications, seeded, apiEnabled])
 
   useEffect(() => {
     const snapshot: WorkflowStore = {

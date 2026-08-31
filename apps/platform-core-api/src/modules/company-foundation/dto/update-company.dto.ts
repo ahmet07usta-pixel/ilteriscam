@@ -34,6 +34,11 @@ export class UpdateCompanyDto {
   taxNumber?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(34)
+  iban?: string;
+
+  @IsOptional()
   @IsEnum(CompanyVerificationStatus)
   verificationStatus?: CompanyVerificationStatus;
 

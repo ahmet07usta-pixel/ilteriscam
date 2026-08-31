@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { AuthenticatedUser, ScreenState, UserRole } from '../entities/domain'
 import type { ApiNotification, RegisterAccountInput } from '../shared/api/contracts'
 import { LoginPage, ForgotPasswordPage, RegisterPage } from '../pages/auth-pages'
+import { KvkkAydinlatmaMetniPage } from '../pages/legal-pages'
 import {
   AccessDeniedPage,
   AyarlarPage,
@@ -145,6 +146,7 @@ export function AppRouter({
       <Route path="/login" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <LoginPage onLogin={onLogin} />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <RegisterPage onRegister={onRegister} />} />
       <Route path="/forgot-password" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <ForgotPasswordPage onRequestPasswordReset={onRequestPasswordReset} />} />
+      <Route path="/kvkk-aydinlatma-metni" element={<KvkkAydinlatmaMetniPage />} />
       {isAuthenticated ? (
         <>
           <Route path="/app" element={<Navigate to={defaultPath} replace />} />
