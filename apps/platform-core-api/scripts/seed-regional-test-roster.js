@@ -12,40 +12,40 @@ const PRODUCER_PASSWORD = 'Uretici2026!';
 const BUYER_PASSWORD = 'Alici2026!';
 
 const PRODUCERS = [
-  { region: 'Marmara', legalName: 'Bogazici Cam Sanayi A.S.' },
-  { region: 'Marmara', legalName: 'Kocaeli Yapi Cam Ltd. Sti.' },
-  { region: 'Marmara', legalName: 'Marmara Ekiz Cam Ticaret A.S.' },
-  { region: 'Ege', legalName: 'Ege Kristal Cam Sanayi A.S.' },
-  { region: 'Ege', legalName: 'Izmir Vega Cam Ltd. Sti.' },
-  { region: 'Ege', legalName: 'Menderes Cam ve Yapi A.S.' },
-  { region: 'Akdeniz', legalName: 'Akdeniz Mavi Cam Sanayi A.S.' },
-  { region: 'Akdeniz', legalName: 'Toroslar Cam Ltd. Sti.' },
-  { region: 'Akdeniz', legalName: 'Cukurova Cam Ticaret A.S.' },
-  { region: 'Ic Anadolu', legalName: 'Baskent Cam Sanayi A.S.' },
-  { region: 'Ic Anadolu', legalName: 'Ankara Yildiz Cam Ltd. Sti.' },
-  { region: 'Ic Anadolu', legalName: 'Konya Ovasi Cam A.S.' },
-  { region: 'Karadeniz', legalName: 'Karadeniz Inci Cam Sanayi A.S.' },
-  { region: 'Karadeniz', legalName: 'Samsun Yesil Cam Ltd. Sti.' },
-  { region: 'Karadeniz', legalName: 'Trabzon Sahil Cam A.S.' },
-  { region: 'Dogu Anadolu', legalName: 'Erzurum Dag Cam Sanayi A.S.' },
-  { region: 'Dogu Anadolu', legalName: 'Van Golu Cam Ltd. Sti.' },
-  { region: 'Dogu Anadolu', legalName: 'Dogu Anadolu Cam Ticaret A.S.' },
-  { region: 'Guneydogu Anadolu', legalName: 'Guneydogu Firat Cam Sanayi A.S.' },
-  { region: 'Guneydogu Anadolu', legalName: 'Diyarbakir Sur Cam Ltd. Sti.' },
-  { region: 'Guneydogu Anadolu', legalName: 'Gaziantep Zeytin Cam A.S.' },
+  { region: 'Marmara', city: 'Istanbul', legalName: 'Bogazici Cam Sanayi A.S.' },
+  { region: 'Marmara', city: 'Kocaeli', legalName: 'Kocaeli Yapi Cam Ltd. Sti.' },
+  { region: 'Marmara', city: 'Bursa', legalName: 'Marmara Ekiz Cam Ticaret A.S.' },
+  { region: 'Ege', city: 'Izmir', legalName: 'Ege Kristal Cam Sanayi A.S.' },
+  { region: 'Ege', city: 'Izmir', legalName: 'Izmir Vega Cam Ltd. Sti.' },
+  { region: 'Ege', city: 'Aydin', legalName: 'Menderes Cam ve Yapi A.S.' },
+  { region: 'Akdeniz', city: 'Antalya', legalName: 'Akdeniz Mavi Cam Sanayi A.S.' },
+  { region: 'Akdeniz', city: 'Mersin', legalName: 'Toroslar Cam Ltd. Sti.' },
+  { region: 'Akdeniz', city: 'Adana', legalName: 'Cukurova Cam Ticaret A.S.' },
+  { region: 'Ic Anadolu', city: 'Ankara', legalName: 'Baskent Cam Sanayi A.S.' },
+  { region: 'Ic Anadolu', city: 'Ankara', legalName: 'Ankara Yildiz Cam Ltd. Sti.' },
+  { region: 'Ic Anadolu', city: 'Konya', legalName: 'Konya Ovasi Cam A.S.' },
+  { region: 'Karadeniz', city: 'Samsun', legalName: 'Karadeniz Inci Cam Sanayi A.S.' },
+  { region: 'Karadeniz', city: 'Samsun', legalName: 'Samsun Yesil Cam Ltd. Sti.' },
+  { region: 'Karadeniz', city: 'Trabzon', legalName: 'Trabzon Sahil Cam A.S.' },
+  { region: 'Dogu Anadolu', city: 'Erzurum', legalName: 'Erzurum Dag Cam Sanayi A.S.' },
+  { region: 'Dogu Anadolu', city: 'Van', legalName: 'Van Golu Cam Ltd. Sti.' },
+  { region: 'Dogu Anadolu', city: 'Malatya', legalName: 'Dogu Anadolu Cam Ticaret A.S.' },
+  { region: 'Guneydogu Anadolu', city: 'Sanliurfa', legalName: 'Guneydogu Firat Cam Sanayi A.S.' },
+  { region: 'Guneydogu Anadolu', city: 'Diyarbakir', legalName: 'Diyarbakir Sur Cam Ltd. Sti.' },
+  { region: 'Guneydogu Anadolu', city: 'Gaziantep', legalName: 'Gaziantep Zeytin Cam A.S.' },
 ];
 
 const BUYERS = [
-  { region: 'Marmara', legalName: 'Yildiz Pencere Sistemleri Ltd. Sti.', companyType: CompanyType.PVC },
-  { region: 'Marmara', legalName: 'Bogaz Cephe ve Cam Balkon Ltd. Sti.', companyType: CompanyType.BALCONY },
-  { region: 'Ege', legalName: 'Izmir Aluminyum Dograma San. Tic. A.S.', companyType: CompanyType.ALUMINUM },
-  { region: 'Ege', legalName: 'Menderes Mobilya ve Cam Ltd. Sti.', companyType: CompanyType.FURNITURE },
-  { region: 'Akdeniz', legalName: 'Akdeniz Mobilya ve Dekorasyon Ltd. Sti.', companyType: CompanyType.FURNITURE },
-  { region: 'Akdeniz', legalName: 'Antalya Cam Balkon Sistemleri Ltd. Sti.', companyType: CompanyType.BALCONY },
-  { region: 'Ic Anadolu', legalName: 'Baskent Pencere ve Kapi Sistemleri A.S.', companyType: CompanyType.PVC },
-  { region: 'Karadeniz', legalName: 'Karadeniz Yapi Market Ltd. Sti.', companyType: CompanyType.OTHER },
-  { region: 'Dogu Anadolu', legalName: 'Erzurum Aluminyum Sistemleri Ltd. Sti.', companyType: CompanyType.ALUMINUM },
-  { region: 'Guneydogu Anadolu', legalName: 'Gaziantep Dograma ve Cephe Ltd. Sti.', companyType: CompanyType.ALUMINUM },
+  { region: 'Marmara', city: 'Istanbul', legalName: 'Yildiz Pencere Sistemleri Ltd. Sti.', companyType: CompanyType.PVC },
+  { region: 'Marmara', city: 'Istanbul', legalName: 'Bogaz Cephe ve Cam Balkon Ltd. Sti.', companyType: CompanyType.BALCONY },
+  { region: 'Ege', city: 'Izmir', legalName: 'Izmir Aluminyum Dograma San. Tic. A.S.', companyType: CompanyType.ALUMINUM },
+  { region: 'Ege', city: 'Izmir', legalName: 'Menderes Mobilya ve Cam Ltd. Sti.', companyType: CompanyType.FURNITURE },
+  { region: 'Akdeniz', city: 'Mersin', legalName: 'Akdeniz Mobilya ve Dekorasyon Ltd. Sti.', companyType: CompanyType.FURNITURE },
+  { region: 'Akdeniz', city: 'Antalya', legalName: 'Antalya Cam Balkon Sistemleri Ltd. Sti.', companyType: CompanyType.BALCONY },
+  { region: 'Ic Anadolu', city: 'Ankara', legalName: 'Baskent Pencere ve Kapi Sistemleri A.S.', companyType: CompanyType.PVC },
+  { region: 'Karadeniz', city: 'Samsun', legalName: 'Karadeniz Yapi Market Ltd. Sti.', companyType: CompanyType.OTHER },
+  { region: 'Dogu Anadolu', city: 'Erzurum', legalName: 'Erzurum Aluminyum Sistemleri Ltd. Sti.', companyType: CompanyType.ALUMINUM },
+  { region: 'Guneydogu Anadolu', city: 'Gaziantep', legalName: 'Gaziantep Dograma ve Cephe Ltd. Sti.', companyType: CompanyType.ALUMINUM },
 ];
 
 const CATALOG_TEMPLATE = [
@@ -104,7 +104,7 @@ async function createProducer(prisma, spec, index) {
       legalName: spec.legalName,
       tradeName: spec.legalName,
       companyType: CompanyType.GLASS_PRODUCER,
-      regionId: spec.region,
+      regionId: spec.city,
       status: CompanyStatus.ACTIVE,
       activatedAt: new Date(),
       contactEmail: email,
@@ -144,7 +144,7 @@ async function createProducer(prisma, spec, index) {
     });
   }
 
-  return { email, password: PRODUCER_PASSWORD, legalName: spec.legalName, region: spec.region };
+  return { email, password: PRODUCER_PASSWORD, legalName: spec.legalName, region: spec.region, city: spec.city };
 }
 
 async function createBuyer(prisma, spec, index) {
@@ -156,7 +156,7 @@ async function createBuyer(prisma, spec, index) {
       legalName: spec.legalName,
       tradeName: spec.legalName,
       companyType: spec.companyType,
-      regionId: spec.region,
+      regionId: spec.city,
       status: CompanyStatus.ACTIVE,
       activatedAt: new Date(),
       contactEmail: email,
@@ -180,7 +180,7 @@ async function createBuyer(prisma, spec, index) {
     data: { companyId: company.id, userId: user.id, role: 'OWNER' },
   });
 
-  return { email, password: BUYER_PASSWORD, legalName: spec.legalName, region: spec.region };
+  return { email, password: BUYER_PASSWORD, legalName: spec.legalName, region: spec.region, city: spec.city };
 }
 
 async function main() {

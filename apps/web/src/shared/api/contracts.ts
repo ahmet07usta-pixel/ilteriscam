@@ -106,6 +106,7 @@ export interface RegisterAccountInput {
   companyTradeName?: string
   businessDescription: string
   taxNumber?: string
+  regionId?: string
   fullName: string
   email: string
   phone?: string

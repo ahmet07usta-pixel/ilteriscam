@@ -21,6 +21,10 @@ export class RegisterDto {
   @MaxLength(50)
   taxNumber?: string;
 
+  @IsOptional()
+  @IsString()
+  regionId?: string;
+
   @IsString()
   @MinLength(2)
   @MaxLength(150)

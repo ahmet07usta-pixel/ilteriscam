@@ -174,9 +174,7 @@ export class CompanyFoundationService {
   }
 
   async listRegions(actor?: AuthenticatedUser): Promise<Region[]> {
-    if (!actor) {
-      throw new ForbiddenException('Authentication required');
-    }
+    void actor;
 
     return this.prisma.region.findMany({
       orderBy: { createdAt: 'desc' },

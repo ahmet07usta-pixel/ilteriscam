@@ -523,20 +523,15 @@ export function AppShell({
                   <strong>Profil Menusu</strong>
                 </header>
                 <div className="dropdown-actions">
-                  <button type="button" className="menu-row" onClick={() => setActivePanel(null)}>
-                    Profilim
-                  </button>
-                  <button type="button" className="menu-row" onClick={() => setActivePanel(null)}>
+                  <button
+                    type="button"
+                    className="menu-row"
+                    onClick={() => {
+                      setActivePanel(null)
+                      onViewChange(role === 'BUYER' ? 'settings' : 'companies')
+                    }}
+                  >
                     Firma Bilgileri
-                  </button>
-                  <button type="button" className="menu-row" onClick={() => setActivePanel(null)}>
-                    Hesap Ayarlari
-                  </button>
-                  <button type="button" className="menu-row" onClick={() => setActivePanel(null)}>
-                    Bildirim Tercihleri
-                  </button>
-                  <button type="button" className="menu-row" onClick={() => setActivePanel(null)}>
-                    Yardim Merkezi
                   </button>
                   <button
                     type="button"

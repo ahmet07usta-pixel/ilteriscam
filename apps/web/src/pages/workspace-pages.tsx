@@ -56,6 +56,7 @@ import { rotateUserPassword } from '../shared/data/auth'
 import type { ViewKey } from '../shared/data/navigation'
 import { canWriteView } from '../shared/data/navigation'
 import { DeleteConfirmationModal, Pagination } from '../shared/ui/global-components'
+import { RegionCitySelect } from '../shared/ui/region-city-select'
 import { ScreenStateGate } from '../shared/ui/states'
 
 export interface WorkspacePageProps {
@@ -2848,24 +2849,14 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                 </select>
               </label>
               {apiEnabled ? (
-                <label>
-                  Bolge
-                  <select
-                    value={activeForm.regionId ?? ''}
-                    onChange={(event) => {
-                      const nextRegionId = event.target.value || undefined
-                      const nextRegionName = regions.find((region) => region.id === nextRegionId)?.name ?? '-'
-                      setActiveForm((current) => (current ? { ...current, regionId: nextRegionId, region: nextRegionName } : current))
-                    }}
-                  >
-                    <option value="">Tum bolgeler</option>
-                    {regions.map((region) => (
-                      <option key={region.id} value={region.id}>
-                        {region.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <RegionCitySelect
+                  regions={regions}
+                  value={activeForm.regionId}
+                  onChange={(nextRegionId) => {
+                    const nextRegionName = regions.find((region) => region.id === nextRegionId)?.name ?? '-'
+                    setActiveForm((current) => (current ? { ...current, regionId: nextRegionId, region: nextRegionName } : current))
+                  }}
+                />
               ) : (
                 <label>
                   Bolge
@@ -2899,7 +2890,10 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                               setRecipientFeedback('')
                             }}
                           />
-                          <span>{company.tradeName ?? company.legalName}</span>
+                          <span>
+                            {company.tradeName ?? company.legalName}
+                            {company.regionId ? <small className="request-recipient-picker-region"> - {regions.find((region) => region.id === company.regionId)?.name ?? '-'}</small> : null}
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -10146,8 +10140,8 @@ function AdminSettingsPage({ state, onRetry, currentUser }: WorkspacePageProps) 
       return
     }
 
-    if (!activeForm.regionId) {
-      setFormError('Ureticinin uretim yaptigi bolgeyi secmeniz zorunludur.')
+    if (!activeForm.regionId || regions.find((region) => region.id === activeForm.regionId)?.regionType !== 'CITY') {
+      setFormError('Ureticinin bulundugu ili secmeniz zorunludur.')
       return
     }
 
@@ -10413,21 +10407,14 @@ function AdminSettingsPage({ state, onRetry, currentUser }: WorkspacePageProps) 
                   onChange={(event) => setActiveForm((current) => (current ? { ...current, iban: event.target.value } : current))}
                 />
               </label>
-              <label className="full-width">
-                Uretim Bolgesi
-                <select
-                  required
-                  value={activeForm.regionId}
-                  onChange={(event) => setActiveForm((current) => (current ? { ...current, regionId: event.target.value } : current))}
-                >
-                  <option value="">Bolge secin</option>
-                  {regions.map((region) => (
-                    <option key={region.id} value={region.id}>
-                      {region.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <RegionCitySelect
+                regions={regions}
+                value={activeForm.regionId || undefined}
+                onChange={(nextRegionId) => setActiveForm((current) => (current ? { ...current, regionId: nextRegionId ?? '' } : current))}
+                zoneAllLabel="Bolge secin"
+                cityAllLabel="Il secin"
+                labelClassName="full-width"
+              />
               {formError ? <p className="settings-form-error full-width">{formError}</p> : null}
             </div>
           ) : null}

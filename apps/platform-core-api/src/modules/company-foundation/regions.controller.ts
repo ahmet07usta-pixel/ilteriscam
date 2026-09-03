@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { PERMISSIONS } from '../rbac/permissions';
 import { CompanyFoundationService } from './company-foundation.service';
 import { CreateRegionDto } from './dto/create-region.dto';
@@ -12,7 +13,7 @@ export class RegionsController {
   constructor(private readonly companyFoundationService: CompanyFoundationService) {}
 
   @Get()
-  @Permissions(PERMISSIONS.USERS_READ)
+  @Public()
   listRegions(@CurrentUser() user: { sub: string; role: any; permissions: string[] } | undefined) {
     return this.companyFoundationService.listRegions(user as any);
   }

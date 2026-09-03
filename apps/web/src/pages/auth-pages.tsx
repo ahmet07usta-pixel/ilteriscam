@@ -1,6 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import type { RegisterAccountInput } from '../shared/api/contracts'
+import { useEffect, useState } from 'react'
+import type { ApiRegion, RegisterAccountInput } from '../shared/api/contracts'
+import { regionsApi } from '../shared/api/regions-api'
+import { RegionCitySelect } from '../shared/ui/region-city-select'
 
 interface AuthPageProps {
   onLogin: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>
@@ -237,6 +239,8 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
   const [companyTradeName, setCompanyTradeName] = useState('')
   const [businessDescription, setBusinessDescription] = useState('')
   const [taxNumber, setTaxNumber] = useState('')
+  const [regionId, setRegionId] = useState<string | undefined>(undefined)
+  const [regions, setRegions] = useState<ApiRegion[]>([])
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -246,9 +250,18 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  useEffect(() => {
+    void regionsApi.list().then(setRegions).catch(() => setRegions([]))
+  }, [])
+
   const handleRegister = async () => {
     if (!companyLegalName.trim() || !businessDescription.trim() || !fullName.trim() || !email.trim() || !password) {
       setError('Lutfen zorunlu alanlari doldurun.')
+      return
+    }
+
+    if (!regionId || regions.find((region) => region.id === regionId)?.regionType !== 'CITY') {
+      setError('Lutfen firmanizin bulundugu ili secin.')
       return
     }
 
@@ -282,6 +295,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
       companyTradeName: companyTradeName.trim() || undefined,
       businessDescription: businessDescription.trim(),
       taxNumber: taxNumber.trim() || undefined,
+      regionId,
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
@@ -330,6 +344,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
             Vergi No (opsiyonel)
             <input type="text" value={taxNumber} onChange={(event) => setTaxNumber(event.target.value)} placeholder="Orn: 1234567890" />
           </label>
+          <RegionCitySelect regions={regions} value={regionId} onChange={setRegionId} zoneAllLabel="Bolge secin" cityAllLabel="Il secin" />
           <label>
             Ad Soyad
             <input type="text" required value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Yetkili adi soyadi" />

@@ -105,11 +105,20 @@ export class RequestsService {
   async listRecipientCompanies(actor?: AuthenticatedUser, regionId?: string) {
     const authenticatedActor = this.requireActor(actor);
 
+    let regionIds: string[] | undefined;
+    if (regionId) {
+      const children = await this.prisma.region.findMany({
+        where: { parentRegionId: regionId },
+        select: { id: true },
+      });
+      regionIds = children.length > 0 ? [regionId, ...children.map((child) => child.id)] : [regionId];
+    }
+
     return this.prisma.company.findMany({
       where: {
         companyType: CompanyType.GLASS_PRODUCER,
         status: CompanyStatus.ACTIVE,
-        ...(regionId ? { regionId } : {}),
+        ...(regionIds ? { regionId: { in: regionIds } } : {}),
         memberships: {
           none: {
             userId: authenticatedActor.sub,

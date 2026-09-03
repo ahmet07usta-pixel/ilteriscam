@@ -84,6 +84,13 @@ export class AuthService {
       );
     }
 
+    if (input.regionId) {
+      const region = await this.prisma.region.findUnique({ where: { id: input.regionId } });
+      if (!region) {
+        throw new BadRequestException('Region not found');
+      }
+    }
+
     const passwordHash = await bcrypt.hash(input.password, 12);
     const normalizedEmail = input.email.trim().toLowerCase();
 
@@ -97,6 +104,7 @@ export class AuthService {
             companyType: CompanyType.OTHER,
             businessDescription: input.businessDescription.trim(),
             taxNumber: input.taxNumber?.trim() || undefined,
+            regionId: input.regionId,
             verificationStatus: CompanyVerificationStatus.PENDING,
             status: CompanyStatus.ACTIVE,
           },
