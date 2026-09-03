@@ -3228,7 +3228,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
                     {viewRequest && ['DRAFT', 'OPEN_FOR_QUOTATION'].includes(viewRequest.status) && canCreateAttachments && (
                       <div className="attachment-upload-controls">
                       {canReadItems && requestItems.length > 0 && (
-                        <label>
+                        <label className="attachment-item-select-label">
                           Bagli Kalem
                           <select aria-label="Dosyanin bagli oldugu kalem" value={attachmentRequestItemId} disabled={Boolean(attachmentOperation)} onChange={(event) => setAttachmentRequestItemId(event.target.value)}>
                             <option value="">Talep geneli</option>

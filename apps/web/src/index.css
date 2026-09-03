@@ -1937,7 +1937,7 @@ button:focus {
   flex-wrap: wrap;
 }
 
-.attachment-upload-controls > label:first-child {
+.attachment-item-select-label {
   display: grid;
   gap: 0.2rem;
   min-width: 190px;
@@ -2081,7 +2081,7 @@ button:focus {
     justify-content: stretch;
   }
 
-  .attachment-upload-controls > label:first-child {
+  .attachment-item-select-label {
     flex: 1 1 100%;
   }
 }
