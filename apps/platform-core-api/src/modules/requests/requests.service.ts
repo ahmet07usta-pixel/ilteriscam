@@ -441,6 +441,9 @@ export class RequestsService {
     companyRegionId: string | null,
     actor: AuthenticatedUser,
   ): Promise<void> {
+    void companyRegionId;
+    void actor;
+
     if (regionId === undefined || regionId === null) {
       return;
     }
@@ -452,10 +455,6 @@ export class RequestsService {
 
     if (!region) {
       throw new BadRequestException('Active region not found');
-    }
-
-    if (!this.canManageScope(actor) && companyRegionId && companyRegionId !== regionId) {
-      throw new ForbiddenException('Region is outside the company scope');
     }
   }
 

@@ -2098,7 +2098,16 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
       return
     }
 
-    if (!activeForm.company.trim() || !activeForm.requestType.trim() || !activeForm.product.trim() || !activeForm.title.trim() || !activeForm.description.trim() || !activeForm.owner.trim()) {
+    const missingFields: string[] = []
+    if (!activeForm.company.trim()) missingFields.push('Firma')
+    if (!activeForm.requestType.trim()) missingFields.push('Talep Turu')
+    if (!activeForm.product.trim()) missingFields.push('Urun')
+    if (!activeForm.title.trim()) missingFields.push('Talep Basligi')
+    if (!activeForm.description.trim()) missingFields.push('Aciklama')
+    if (!activeForm.owner.trim()) missingFields.push('Sorumlu')
+
+    if (missingFields.length > 0) {
+      setFeedbackMessage(`Lutfen su zorunlu alanlari doldurun: ${missingFields.join(', ')}.`)
       return
     }
 
