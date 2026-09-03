@@ -1800,7 +1800,13 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
             </header>
             <div className="bar-chart">
               {offerDistribution.map((item) => (
-                <span key={`offer-${item.label}`} style={{ height: `${item.ratio}%` }} title={`${item.label}: ${item.count}`} />
+                <div key={`offer-${item.label}`} className="bar-chart-column" title={`${item.label}: ${item.count}`}>
+                  <span className="bar-chart-count">{item.count}</span>
+                  <div className="bar-chart-track">
+                    <span className="bar-chart-bar" style={{ height: `${item.ratio}%` }} />
+                  </div>
+                  <span className="bar-chart-label">{item.label}</span>
+                </div>
               ))}
             </div>
           </article>
@@ -1811,7 +1817,13 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
             </header>
             <div className="bar-chart order">
               {orderDistribution.map((item) => (
-                <span key={`order-${item.label}`} style={{ height: `${item.ratio}%` }} title={`${item.label}: ${item.count}`} />
+                <div key={`order-${item.label}`} className="bar-chart-column" title={`${item.label}: ${item.count}`}>
+                  <span className="bar-chart-count">{item.count}</span>
+                  <div className="bar-chart-track">
+                    <span className="bar-chart-bar" style={{ height: `${item.ratio}%` }} />
+                  </div>
+                  <span className="bar-chart-label">{item.label}</span>
+                </div>
               ))}
             </div>
           </article>
@@ -3925,7 +3937,7 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
             <label>Termin (Gun)<input type="number" min="1" step="1" value={form.leadTimeDays} onChange={(event) => setForm((current) => current && ({ ...current, leadTimeDays: event.target.value }))} /></label>
             <label>Gecerlilik Tarihi<input type="date" value={form.validUntil} onChange={(event) => setForm((current) => current && ({ ...current, validUntil: event.target.value }))} /></label>
             <label className="full-width">Notlar<textarea rows={4} maxLength={5000} value={form.notes} onChange={(event) => setForm((current) => current && ({ ...current, notes: event.target.value }))} /></label>
-            {form.version !== undefined && <p className="request-items-lock-note full-width">Authoritative versiyon: {form.version}</p>}
+            {form.version !== undefined && <p className="request-items-lock-note full-width">Guncel versiyon: {form.version}</p>}
           </div>
         )}
       </RequestModal>
@@ -3952,7 +3964,7 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
         </header>
       </section>
       <section className="glass-card panel offers-table-panel">
-        <header className="panel-header offers-table-head"><div><h3>Teklif Listesi</h3><p>{quotations.length} authoritative kayit</p></div></header>
+        <header className="panel-header offers-table-head"><div><h3>Teklif Listesi</h3><p>{quotations.length} kayit gosteriliyor</p></div></header>
         {content}
       </section>
     </section>
@@ -5914,7 +5926,7 @@ function ShipmentApiWorkspace({ currentUser }: { currentUser: AuthenticatedUser 
     <section className="workspace-main dashboard-main shipment-page shipment-api-page">
       <section className="shipment-header-row">
         <header className="workspace-header glass-card dashboard-hero shipment-hero">
-          <div><p className="eyebrow">Sevkiyat Operasyonu</p><h2>Sevkiyat Yonetimi</h2><p>Tamamlanan uretimleri planlayin ve teslimata kadar authoritative olarak takip edin.</p></div>
+          <div><p className="eyebrow">Sevkiyat Operasyonu</p><h2>Sevkiyat Yonetimi</h2><p>Tamamlanan uretimleri planlayin ve teslimata kadar takip edin.</p></div>
         </header>
         {canCreate && <button type="button" className="solid-btn shipment-create-btn" onClick={openPlan}>Sevkiyat Planla</button>}
       </section>
@@ -6667,21 +6679,21 @@ export function FiyatUrunYonetimiPage({ state, onRetry, currentUser, role }: Wor
           ) : null}
         </header>
 
-        <section className="request-overview-grid">
-          <article className="request-overview-card glass-card">
+        <section className="stat-grid">
+          <article className="request-overview-card glass-card stat-card">
             <span>Toplam Fiyat Kalemi</span>
             <strong>{totalCount}</strong>
-            <p>Aktif ve pasif tum satirlar</p>
+            <small>Aktif ve pasif tum satirlar</small>
           </article>
-          <article className="request-overview-card glass-card">
+          <article className="request-overview-card glass-card stat-card">
             <span>Aktif Kural</span>
             <strong>{activeCount}</strong>
-            <p>Teklif motorunda kullanilacak kayitlar</p>
+            <small>Teklif motorunda kullanilacak kayitlar</small>
           </article>
-          <article className="request-overview-card glass-card">
+          <article className="request-overview-card glass-card stat-card">
             <span>Pasif Kural</span>
             <strong>{passiveCount}</strong>
-            <p>Gecici olarak devre disi satirlar</p>
+            <small>Gecici olarak devre disi satirlar</small>
           </article>
         </section>
 
@@ -7816,7 +7828,7 @@ function AdminCompaniesPage({ state, onRetry, currentUser }: WorkspacePageProps)
           footer={<button type="button" className="ghost-btn" onClick={() => setViewCompany(null)}>Kapat</button>}
         >
           {viewCompany ? (
-            <div className="request-overview-grid">
+            <div className="request-detail-grid">
               <article className="request-detail-card">
                 <span>Yasal Unvan</span>
                 <strong>{viewCompany.legalName}</strong>
@@ -9572,7 +9584,7 @@ function LegacyAyarlarPage({ state, onRetry, currentUser, role }: WorkspacePageP
                 </tr>
                 <tr>
                   <td data-label="Alan">Rol</td>
-                  <td data-label="Deger">{role}</td>
+                  <td data-label="Deger">{{ ADMIN: 'Yonetici', MANUFACTURER: 'Uretici', BUYER: 'Alici' }[role]}</td>
                 </tr>
               </tbody>
             </table>

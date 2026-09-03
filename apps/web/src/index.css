@@ -1288,19 +1288,49 @@ button:focus {
 
 .bar-chart {
   height: 164px;
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  display: flex;
   gap: 0.5rem;
   align-items: end;
 }
 
-.bar-chart span {
+.bar-chart-column {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 0.28rem;
+}
+
+.bar-chart-count {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #12314a;
+}
+
+.bar-chart-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bar-chart-bar {
+  width: 100%;
   border-radius: 10px 10px 4px 4px;
   background: linear-gradient(180deg, rgba(121, 182, 232, 0.9), rgba(47, 97, 143, 0.84));
 }
 
-.bar-chart.order span {
+.bar-chart.order .bar-chart-bar {
   background: linear-gradient(180deg, rgba(166, 209, 244, 0.95), rgba(69, 127, 177, 0.86));
+}
+
+.bar-chart-label {
+  font-size: 0.62rem;
+  color: #567387;
+  text-align: center;
+  line-height: 1.15;
 }
 
 .progress-list {
