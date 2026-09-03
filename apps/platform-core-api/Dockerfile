@@ -14,5 +14,6 @@ COPY --from=base /app/package*.json ./
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/dist ./dist
 COPY --from=base /app/prisma ./prisma
+COPY --from=base /app/scripts ./scripts
 EXPOSE 4000
 CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
