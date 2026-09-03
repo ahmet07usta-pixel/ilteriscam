@@ -45,32 +45,19 @@ export function Tooltip({ text, children }: { text: string; children: ReactNode 
   )
 }
 
-interface SearchItem {
-  id: string
-  category: 'Talep' | 'Siparis' | 'Firma' | 'Urun' | 'Teklif'
-  title: string
-  subtitle: string
-  target: ViewKey
+interface SearchableView {
+  key: ViewKey
+  label: string
 }
 
-const searchIndex: SearchItem[] = [
-  { id: 'sr-1', category: 'Talep', title: 'DM-9134 Mimari Cam Talebi', subtitle: 'Ankara / 420 m2', target: 'requests' },
-  { id: 'sr-2', category: 'Talep', title: 'DM-9135 Isicam Talebi', subtitle: 'Istanbul / 150 m2', target: 'requests' },
-  { id: 'sr-3', category: 'Siparis', title: 'SP-9021 Durum Takibi', subtitle: 'Kesim asamasinda', target: 'orders' },
-  { id: 'sr-4', category: 'Siparis', title: 'SP-9022 Termin Kontrolu', subtitle: 'Yukleme bekliyor', target: 'shipment' },
-  { id: 'sr-5', category: 'Firma', title: 'Eksen Cam Sanayi', subtitle: 'Uretici firma profili', target: 'companies' },
-  { id: 'sr-6', category: 'Firma', title: 'Nova Cephe Sistemleri', subtitle: 'Alici firma profili', target: 'companies' },
-  { id: 'sr-7', category: 'Urun', title: 'Temperli Cam 8mm', subtitle: 'Stok ve fiyat karti', target: 'offers' },
-  { id: 'sr-8', category: 'Urun', title: 'Lamine Cam 6+6', subtitle: 'Teknik ozellik sayfasi', target: 'offers' },
-  { id: 'sr-9', category: 'Teklif', title: 'QT-455 Guncel Teklif', subtitle: 'Onay bekliyor', target: 'offers' },
-  { id: 'sr-10', category: 'Teklif', title: 'QT-462 Revize Teklif', subtitle: 'Musteri yaniti bekliyor', target: 'offers' },
-]
-
 interface GlobalSearchBoxProps {
+  items: SearchableView[]
   onNavigate: (view: ViewKey) => void
 }
 
-export function GlobalSearchBox({ onNavigate }: GlobalSearchBoxProps) {
+// Searches only the pages this user can actually reach (navItems, already role-scoped by the caller) -
+// this used to search a hardcoded list of fake request/order/company records that were never real data.
+export function GlobalSearchBox({ items, onNavigate }: GlobalSearchBoxProps) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({ top: 0, left: 0, width: 460 })
@@ -79,23 +66,13 @@ export function GlobalSearchBox({ onNavigate }: GlobalSearchBoxProps) {
   const panelRef = useRef<HTMLElement | null>(null)
 
   const results = useMemo(() => {
-    if (!query.trim()) {
-      return searchIndex.slice(0, 8)
+    const keyword = query.trim().toLowerCase()
+    if (!keyword) {
+      return items
     }
 
-    const keyword = query.toLowerCase()
-    return searchIndex.filter((item) => `${item.category} ${item.title} ${item.subtitle}`.toLowerCase().includes(keyword)).slice(0, 12)
-  }, [query])
-
-  const groupedResults = useMemo(() => {
-    const map = new Map<string, SearchItem[]>()
-    results.forEach((item) => {
-      const group = map.get(item.category) ?? []
-      group.push(item)
-      map.set(item.category, group)
-    })
-    return Array.from(map.entries())
-  }, [results])
+    return items.filter((item) => item.label.toLowerCase().includes(keyword))
+  }, [items, query])
 
   useEffect(() => {
     if (!open) {
@@ -178,31 +155,23 @@ export function GlobalSearchBox({ onNavigate }: GlobalSearchBoxProps) {
       {open &&
         createPortal(
           <section ref={panelRef} className="search-results top-dropdown-panel" style={panelStyle} aria-label="Arama Sonuclari">
-            {groupedResults.length ? (
-              <div className="search-groups">
-                {groupedResults.map(([category, items]) => (
-                  <section key={category} className="search-group-block">
-                    <header>{category}</header>
-                    <ul>
-                      {items.map((item) => (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onNavigate(item.target)
-                              setOpen(false)
-                              setQuery('')
-                            }}
-                          >
-                            <strong>{item.title}</strong>
-                            <span>{item.subtitle}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
+            {results.length ? (
+              <ul className="search-group-block">
+                {results.map((item) => (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onNavigate(item.key)
+                        setOpen(false)
+                        setQuery('')
+                      }}
+                    >
+                      <strong>{item.label}</strong>
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
               <p>Sonuc bulunamadi</p>
             )}

@@ -329,7 +329,7 @@ export function AppShell({
                 <span />
                 <span />
               </button>
-              <GlobalSearchBox onNavigate={onViewChange} />
+              <GlobalSearchBox items={navItems} onNavigate={onViewChange} />
             </div>
             <div className="top-actions">
               <div className="top-action-buttons">
