@@ -36,7 +36,20 @@ interface RefreshResponse {
 
 let accessToken: string | null = null
 let refreshPromise: Promise<RefreshResponse> | null = null
-let expectedUserId: string | null = null
+// Persisted in sessionStorage (tab-scoped, survives reload, NOT shared with other tabs - unlike the
+// refreshToken cookie) so a hard reload still knows "who this tab was" and can catch a hijacked cookie
+// on the very first refresh call, not just later ones during the same in-memory session.
+const EXPECTED_USER_STORAGE_KEY = 'dijitalcam.expectedUserId'
+
+function readExpectedUserId(): string | null {
+  try {
+    return window.sessionStorage.getItem(EXPECTED_USER_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+let expectedUserId: string | null = typeof window !== 'undefined' ? readExpectedUserId() : null
 
 export function setAccessToken(token: string | null): void {
   accessToken = token
@@ -50,6 +63,15 @@ export function getAccessToken(): string | null {
 // as a different user (see AUTH_SESSION_REPLACED_EVENT above) can be detected instead of silently adopted.
 export function setExpectedUserId(userId: string | null): void {
   expectedUserId = userId
+  try {
+    if (userId) {
+      window.sessionStorage.setItem(EXPECTED_USER_STORAGE_KEY, userId)
+    } else {
+      window.sessionStorage.removeItem(EXPECTED_USER_STORAGE_KEY)
+    }
+  } catch {
+    // Ignore storage quota or browser privacy errors - the in-memory value still works for this page's lifetime.
+  }
 }
 
 export function resolveApiCapabilityUrl(url: string): string {

@@ -469,8 +469,14 @@ function App() {
   }, [])
 
   useEffect(() => {
+    // Don't touch the baseline while hydration is still in flight - it needs the PRE-reload value
+    // (restored from sessionStorage on module load) to detect a cookie hijacked by another tab.
+    // Only resync once hydration has settled on a final currentUser.
+    if (!isAuthHydrated) {
+      return
+    }
     setExpectedUserId(currentUser?.id ?? null)
-  }, [currentUser])
+  }, [currentUser, isAuthHydrated])
 
   useEffect(() => {
     // The mounted user was read from storage; rewriting it here would clobber a session replaced after boot.
