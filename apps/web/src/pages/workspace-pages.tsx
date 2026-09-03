@@ -111,7 +111,7 @@ function parseTurkishAmount(value: string): number {
 }
 
 type RequestPriority = 'Dusuk' | 'Orta' | 'Yuksek' | 'Kritik'
-export type RequestStatus = 'Bekleyen' | 'Teklif Hazirlaniyor' | 'Teklif Gonderildi' | 'Onaylanan' | 'Reddedilen'
+export type RequestStatus = 'Bekleyen' | 'Teklif Hazirlaniyor' | 'Teklif Gonderildi' | 'Onaylanan' | 'Iptal Edildi'
 export type OfferStatus = 'Hazirlaniyor' | 'Gonderildi' | 'Onaylandi' | 'Reddedildi'
 export type OrderStatus = 'Bekliyor' | 'Uretimde' | 'Sevkiyata Hazir' | 'Teslim Edildi'
 export type ProductionStatus = 'Planlandi' | 'Kesim' | 'Montaj' | 'Tamamlandi' | 'Beklemede'
@@ -378,7 +378,7 @@ interface SettingFormState {
 
 export const requestRows: RequestRow[] = []
 
-const requestStatuses: Array<'Tum Durumlar' | RequestStatus> = ['Tum Durumlar', 'Bekleyen', 'Teklif Hazirlaniyor', 'Teklif Gonderildi', 'Onaylanan', 'Reddedilen']
+const requestStatuses: Array<'Tum Durumlar' | RequestStatus> = ['Tum Durumlar', 'Bekleyen', 'Teklif Hazirlaniyor', 'Teklif Gonderildi', 'Onaylanan', 'Iptal Edildi']
 const requestRegions = ['Marmara', 'Istanbul', 'Ege', 'Anadolu', 'Akdeniz']
 const requestPriorities: Array<'Tum Oncelikler' | RequestPriority> = ['Tum Oncelikler', 'Kritik', 'Yuksek', 'Orta', 'Dusuk']
 const requestTypes = ['Mimari Cam', 'Isicam', 'Lamine Cam', 'Cam Balkon', 'Numune', 'Bolme Cami', 'Dograma Camlari', 'Otel Projesi']
@@ -919,7 +919,7 @@ export function AccessDeniedPage({ state, onRetry }: Pick<WorkspacePageProps, 's
 }
 
 function RequestStatusBadge({ status }: { status: RequestStatus }) {
-  return <span className={`request-badge status-${status.toLowerCase()}`}>{status}</span>
+  return <span className={`request-badge status-${status.toLowerCase().replace(/\s+/g, '-')}`}>{status}</span>
 }
 
 function RequestPriorityBadge({ priority }: { priority: RequestPriority }) {
@@ -2085,7 +2085,7 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
   const totalCount = filteredRows.length
   const waitingCount = filteredRows.filter((row) => row.status === 'Bekleyen').length
   const approvedCount = filteredRows.filter((row) => row.status === 'Onaylanan').length
-  const rejectedCount = filteredRows.filter((row) => row.status === 'Reddedilen').length
+  const rejectedCount = filteredRows.filter((row) => row.status === 'Iptal Edildi').length
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / REQUEST_PAGE_SIZE))
   const safePage = Math.min(page, pageCount)
   const pagedRows = useMemo(() => {
@@ -2650,9 +2650,9 @@ export function TaleplerPage({ state, onRetry, currentUser, role, workflow, work
             <small>Onay sureci tamamlandi</small>
           </article>
           <article className="glass-card stat-card request-stat-card">
-            <span>Reddedilen</span>
+            <span>Iptal Edildi</span>
             <strong>{rejectedCount}</strong>
-            <small>Revize bekleyen kayitlar</small>
+            <small>Iptal edilen talepler</small>
           </article>
         </section>
 

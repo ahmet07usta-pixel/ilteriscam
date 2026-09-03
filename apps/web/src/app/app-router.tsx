@@ -32,6 +32,7 @@ interface AppRouterProps {
   currentUser: AuthenticatedUser | null
   role: UserRole
   state: ScreenState
+  sessionNotice: string
   notifications: ToastItem[]
   activityLog: WorkflowStore['activityLog']
   activityReadIds: string[]
@@ -56,6 +57,7 @@ export function AppRouter({
   currentUser,
   role,
   state,
+  sessionNotice,
   notifications,
   activityLog,
   activityReadIds,
@@ -143,7 +145,7 @@ export function AppRouter({
 
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <LoginPage onLogin={onLogin} />} />
+      <Route path="/login" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <LoginPage onLogin={onLogin} initialNotice={sessionNotice} />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <RegisterPage onRegister={onRegister} />} />
       <Route path="/forgot-password" element={isAuthenticated ? <Navigate to={defaultPath} replace /> : <ForgotPasswordPage onRequestPasswordReset={onRequestPasswordReset} />} />
       <Route path="/kvkk-aydinlatma-metni" element={<KvkkAydinlatmaMetniPage />} />

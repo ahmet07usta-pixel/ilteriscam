@@ -6,6 +6,7 @@ import { RegionCitySelect } from '../shared/ui/region-city-select'
 
 interface AuthPageProps {
   onLogin: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>
+  initialNotice?: string
 }
 
 interface RegisterPageProps {
@@ -20,12 +21,12 @@ function isStrongPassword(password: string): boolean {
   return password.length >= 12 && !/\s/.test(password) && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password)
 }
 
-export function LoginPage({ onLogin }: AuthPageProps) {
+export function LoginPage({ onLogin, initialNotice }: AuthPageProps) {
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialNotice ?? '')
 
   const handleLogin = async () => {
     const result = await onLogin(identifier, password)

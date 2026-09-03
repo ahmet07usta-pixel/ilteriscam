@@ -235,7 +235,7 @@ test('binds Request list, detail, create, submit, and cancel without replacing w
 
   await createdRow.getByRole('button', { name: 'Sil' }).click()
   await page.getByRole('region', { name: 'Kaydi silmek istediginize emin misiniz?' }).getByRole('button', { name: 'Sil' }).click()
-  await expect(createdRow).toContainText('Reddedilen')
+  await expect(createdRow).toContainText('Iptal Edildi')
   expect(cancelCalls).toBe(1)
 
   const storedWorkflow = await page.evaluate(() => JSON.parse(window.localStorage.getItem('dijitalcam.workflowStore') ?? 'null'))

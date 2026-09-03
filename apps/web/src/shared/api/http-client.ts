@@ -4,6 +4,9 @@ const runtimeApiBaseUrl = typeof window !== 'undefined'
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? runtimeApiBaseUrl).replace(/\/$/, '')
 
 export const AUTH_EXPIRED_EVENT = 'dijitalcam:auth-expired'
+// Fired when a refresh returns a DIFFERENT user than the one this tab had - the shared refreshToken
+// cookie was overwritten by another account logging in on the same origin (cookies are not tab-scoped).
+export const AUTH_SESSION_REPLACED_EVENT = 'dijitalcam:auth-session-replaced'
 
 export class ApiError extends Error {
   readonly status: number
@@ -33,6 +36,7 @@ interface RefreshResponse {
 
 let accessToken: string | null = null
 let refreshPromise: Promise<RefreshResponse> | null = null
+let expectedUserId: string | null = null
 
 export function setAccessToken(token: string | null): void {
   accessToken = token
@@ -42,6 +46,12 @@ export function getAccessToken(): string | null {
   return accessToken
 }
 
+// Lets the app declare "this tab is currently logged in as user X" so a refresh that comes back
+// as a different user (see AUTH_SESSION_REPLACED_EVENT above) can be detected instead of silently adopted.
+export function setExpectedUserId(userId: string | null): void {
+  expectedUserId = userId
+}
+
 export function resolveApiCapabilityUrl(url: string): string {
   return new URL(url, `${API_BASE_URL}/`).toString()
 }
@@ -49,6 +59,12 @@ export function resolveApiCapabilityUrl(url: string): string {
 function notifyAuthExpired(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+  }
+}
+
+function notifySessionReplaced(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_SESSION_REPLACED_EVENT))
   }
 }
 
@@ -94,6 +110,16 @@ async function requestRefresh(): Promise<RefreshResponse> {
         }
 
         const result = await parseResponse<RefreshResponse>(response)
+        const refreshedUserId = result.user && typeof result.user === 'object' && 'id' in result.user
+          ? String((result.user as { id: unknown }).id)
+          : undefined
+
+        if (expectedUserId && refreshedUserId && refreshedUserId !== expectedUserId) {
+          setAccessToken(null)
+          notifySessionReplaced()
+          throw new ApiError(401, 'Bu tarayicida baska bir hesapla giris yapildigi icin oturumunuz sonlandirildi.')
+        }
+
         setAccessToken(result.accessToken)
         return result
       })

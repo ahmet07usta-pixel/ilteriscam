@@ -71,7 +71,7 @@ export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   OPEN_FOR_QUOTATION: 'Teklif Hazirlaniyor',
   QUOTED: 'Teklif Gonderildi',
   AWARDED: 'Onaylanan',
-  CANCELLED: 'Reddedilen',
+  CANCELLED: 'Iptal Edildi',
 }
 
 export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {

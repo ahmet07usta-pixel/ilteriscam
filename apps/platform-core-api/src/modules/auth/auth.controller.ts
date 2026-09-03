@@ -157,33 +157,39 @@ export class AuthController {
     });
   }
 
-  private setRefreshCookie(response: Response, refreshToken: string): void {
+  private resolveCookieOptions(): { domain?: string; sameSite: 'lax' | 'none' | 'strict'; secure: boolean } {
     const configuredDomain = this.configService.get<string>('app.cookieDomain')?.trim();
     const cookieDomain = configuredDomain && !['localhost', '127.0.0.1', '::1'].includes(configuredDomain)
       ? configuredDomain
       : undefined;
+    const sameSite = this.configService.get<'lax' | 'none' | 'strict'>('app.cookieSameSite') ?? 'lax';
+    // SameSite=None requires Secure; the frontend and API live on different registrable domains in production.
+    const secure = sameSite === 'none' ? true : this.configService.get<boolean>('app.cookieSecure') ?? false;
+
+    return { domain: cookieDomain, sameSite, secure };
+  }
+
+  private setRefreshCookie(response: Response, refreshToken: string): void {
+    const { domain, sameSite, secure } = this.resolveCookieOptions();
 
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      domain: cookieDomain,
+      sameSite,
+      secure,
+      domain,
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
 
   private clearRefreshCookie(response: Response): void {
-    const configuredDomain = this.configService.get<string>('app.cookieDomain')?.trim();
-    const cookieDomain = configuredDomain && !['localhost', '127.0.0.1', '::1'].includes(configuredDomain)
-      ? configuredDomain
-      : undefined;
+    const { domain, sameSite, secure } = this.resolveCookieOptions();
 
     response.clearCookie('refreshToken', {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      domain: cookieDomain,
+      sameSite,
+      secure,
+      domain,
       path: '/',
     });
   }

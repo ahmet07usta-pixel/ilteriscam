@@ -21,7 +21,7 @@ import {
   type WorkflowStore,
 } from './pages/workspace-pages'
 import { loginWithIdentifier, logoutFromBackend, registerCompanyAccount, requestPasswordReset } from './shared/data/auth'
-import { apiRequest, AUTH_EXPIRED_EVENT } from './shared/api/http-client'
+import { apiRequest, AUTH_EXPIRED_EVENT, AUTH_SESSION_REPLACED_EVENT, setExpectedUserId } from './shared/api/http-client'
 import { notificationsApi } from './shared/api/notifications-api'
 import { notifications as sourceNotifications } from './shared/data/mock'
 import type { ToastItem } from './shared/ui/toast'
@@ -416,6 +416,7 @@ function App() {
   const [apiNotifications, setApiNotifications] = useState<ApiNotification[]>([])
   const [seeded, setSeeded] = useState(false)
   const [isAuthHydrated, setIsAuthHydrated] = useState(false)
+  const [sessionNotice, setSessionNotice] = useState('')
   const hasSyncedStoredAuthRef = useRef(false)
   const role: UserRole = currentUser?.role ?? 'BUYER'
   const isAuthenticated = Boolean(currentUser)
@@ -456,6 +457,20 @@ function App() {
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
     return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
   }, [])
+
+  useEffect(() => {
+    const handleSessionReplaced = () => {
+      setCurrentUser(null)
+      persistStoredAuthUser(null)
+      setSessionNotice('Bu tarayicida baska bir hesapla giris yapildigi icin oturumunuz sonlandirildi. Lutfen tekrar giris yapin.')
+    }
+    window.addEventListener(AUTH_SESSION_REPLACED_EVENT, handleSessionReplaced)
+    return () => window.removeEventListener(AUTH_SESSION_REPLACED_EVENT, handleSessionReplaced)
+  }, [])
+
+  useEffect(() => {
+    setExpectedUserId(currentUser?.id ?? null)
+  }, [currentUser])
 
   useEffect(() => {
     // The mounted user was read from storage; rewriting it here would clobber a session replaced after boot.
@@ -760,6 +775,7 @@ function App() {
     persistStoredAuthUser(null)
     setActiveToasts([])
     setSeeded(false)
+    setSessionNotice('')
     void logoutFromBackend().catch(() => undefined)
   }
 
@@ -1267,6 +1283,7 @@ function App() {
         currentUser={currentUser}
         role={role}
         state={state}
+        sessionNotice={sessionNotice}
         notifications={activeToasts}
         activityLog={activityLog}
         activityReadIds={activityReadIds}
