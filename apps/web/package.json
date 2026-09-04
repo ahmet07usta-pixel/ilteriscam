@@ -10,7 +10,8 @@
     "scan:secrets": "node scripts/scan-client-secrets.mjs",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:real": "node scripts/check-real-backend.mjs && node ../platform-core-api/scripts/seed-synthetic-auth-fixture.js && playwright test tests/e2e/real-backend-synthetic-auth.spec.ts --config=playwright.real.config.ts"
   },
   "dependencies": {
     "react": "^19.2.8",

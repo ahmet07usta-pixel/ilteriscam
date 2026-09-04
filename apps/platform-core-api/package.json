@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "seed:synthetic-auth": "node scripts/seed-synthetic-auth-fixture.js",
     "lint": "tsc --noEmit",
     "test": "echo \"No tests configured yet\""
   },

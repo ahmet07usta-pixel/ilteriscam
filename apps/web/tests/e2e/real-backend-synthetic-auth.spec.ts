@@ -208,8 +208,8 @@ test('real backend-backed synthetic auth E2E for rotation, revoke, revoke-all, a
   expect(refreshedUser.refreshTokenHash).toBeUndefined()
 
   await page.goto('/app/ayarlar')
-  await expect(page.getByRole('heading', { name: 'Ayarlar', exact: true })).toBeVisible()
-  await expect(page.locator('h2', { hasText: 'Ayarlar' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Uretici Firma Yonetimi', exact: true })).toBeVisible()
+  await expect(page.locator('h2', { hasText: 'Uretici Firma Yonetimi' })).toBeVisible()
 
   const finalAudit = await page.evaluate(async ({ apiBase, token }) => {
     const response = await fetch(`${apiBase}/audit?limit=25`, {
