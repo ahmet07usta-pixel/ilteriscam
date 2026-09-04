@@ -9,7 +9,7 @@ RUN npm run build
 
 FROM node:22-alpine AS production
 WORKDIR /app
-RUN npm install -g serve
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.js ./server.js
 EXPOSE 4173
-CMD ["sh", "-c", "serve -s dist -l ${PORT:-4173}"]
+CMD ["node", "server.js"]
