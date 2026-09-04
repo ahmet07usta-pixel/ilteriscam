@@ -93,7 +93,6 @@ function createHarness(options = {}) {
         ...data,
         id: `item-${items.length + 1}`,
         version: 1,
-        measurementStatus: MeasurementStatus.PENDING,
       });
       items.push(created);
       return created;
@@ -157,7 +156,9 @@ test('creates an item on a DRAFT Request and audits in the transaction', async (
   const result = await harness.service.create('request-1', createInput, actor);
 
   assert.equal(result.lineNumber, 1);
-  assert.equal(result.measurementStatus, MeasurementStatus.PENDING);
+  assert.equal(result.measurementStatus, MeasurementStatus.APPROVED);
+  assert.equal(result.measurementSource, MeasurementSource.USER);
+  assert.equal(result.calculatedAreaM2.toString(), '0.96');
   assert.equal(harness.captured.creates[0].widthMm, 1200);
   assert.equal(harness.captured.creates[0].heightMm, 800);
   assert.equal(harness.audit.records[0].client, harness.transaction);
@@ -245,8 +246,8 @@ test('derives productType from Request when the client omits it', async () => {
   assert.equal(harness.captured.creates[0].productType, 'LAMINATED_GLASS');
 });
 
-test('does not persist client-provided calculated fields', async () => {
-  const harness = createHarness();
+test('computes calculated fields from width/height/length/depth, ignoring any client-injected calculated values', async () => {
+  const harness = createHarness({ items: [itemFixture({ widthMm: 1000, heightMm: 500 })] });
 
   await harness.service.update('request-1', 'item-1', {
     version: 1,
@@ -256,27 +257,28 @@ test('does not persist client-provided calculated fields', async () => {
   }, actor);
 
   const updateData = harness.captured.updates[0].data;
-  assert.equal('calculatedAreaM2' in updateData, false);
-  assert.equal('calculatedLengthM' in updateData, false);
-  assert.equal('calculatedVolumeM3' in updateData, false);
+  // 1000mm x 500mm = 0.5 m2 - derived from the item's actual dimensions, not the injected 99.
+  assert.equal(updateData.calculatedAreaM2.toString(), '0.5');
+  assert.equal(updateData.calculatedLengthM, undefined);
+  assert.equal(updateData.calculatedVolumeM3, undefined);
 });
 
-test('does not persist client-provided measurementStatus through CRUD', async () => {
+test('sets measurementStatus from the server\'s own approval rule, ignoring any client-injected value', async () => {
   const harness = createHarness({ items: [] });
 
   await harness.service.create('request-1', {
     ...createInput,
     measurementSource: MeasurementSource.USER,
-    measurementStatus: MeasurementStatus.APPROVED,
+    measurementStatus: MeasurementStatus.REJECTED,
   }, actor);
 
-  assert.equal('measurementStatus' in harness.captured.creates[0], false);
-  assert.equal(harness.items[0].measurementStatus, MeasurementStatus.PENDING);
+  assert.equal(harness.captured.creates[0].measurementStatus, MeasurementStatus.APPROVED);
+  assert.equal(harness.items[0].measurementStatus, MeasurementStatus.APPROVED);
 
   await harness.service.update('request-1', harness.items[0].id, {
     version: 1,
     measurementStatus: MeasurementStatus.REJECTED,
   }, actor);
-  assert.equal('measurementStatus' in harness.captured.updates[0].data, false);
-  assert.equal(harness.items[0].measurementStatus, MeasurementStatus.PENDING);
+  assert.equal(harness.captured.updates[0].data.measurementStatus, MeasurementStatus.APPROVED);
+  assert.equal(harness.items[0].measurementStatus, MeasurementStatus.APPROVED);
 });

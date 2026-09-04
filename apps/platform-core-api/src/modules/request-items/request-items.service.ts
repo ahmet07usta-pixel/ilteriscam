@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import {
   CompanyMembershipStatus,
+  MeasurementSource,
+  MeasurementStatus,
   Prisma,
   RequestStatus,
   Role,
@@ -42,6 +44,12 @@ export class RequestItemsService {
             select: { lineNumber: true },
           });
           const changedFields = this.createChangedFields(input);
+          const derived = this.computeDerivedMeasurements({
+            widthMm: input.width,
+            heightMm: input.height,
+            lengthMm: input.length,
+            depthMm: input.depth,
+          });
           const item = await transaction.requestItem.create({
             data: {
               requestId,
@@ -51,12 +59,18 @@ export class RequestItemsService {
               productCode: input.productCode?.trim(),
               quantity: input.quantity,
               unit: input.unit,
-              measurementSource: input.measurementSource,
+              // A human directly typing in these dimensions needs no AI-accuracy review, so it's
+              // immediately trustworthy for pricing - only AI-suggested measurements start PENDING.
+              measurementSource: input.measurementSource ?? MeasurementSource.USER,
+              measurementStatus: MeasurementStatus.APPROVED,
               widthMm: input.width,
               heightMm: input.height,
               lengthMm: input.length,
               depthMm: input.depth,
               thicknessMm: input.thickness,
+              calculatedAreaM2: derived.calculatedAreaM2,
+              calculatedLengthM: derived.calculatedLengthM,
+              calculatedVolumeM3: derived.calculatedVolumeM3,
               createdByUserId: authenticatedActor.sub,
               updatedByUserId: authenticatedActor.sub,
             },
@@ -120,8 +134,20 @@ export class RequestItemsService {
     return this.prisma.$transaction(async (transaction) => {
       const request = await this.getOwnedRequest(requestId, authenticatedActor, transaction);
       this.assertDraft(request.status, 'updated');
-      await this.getRequestItem(requestId, itemId, transaction);
+      const existing = await this.getRequestItem(requestId, itemId, transaction);
 
+      const derived = this.computeDerivedMeasurements({
+        widthMm: input.width ?? existing.widthMm,
+        heightMm: input.height ?? existing.heightMm,
+        lengthMm: input.length ?? existing.lengthMm,
+        depthMm: input.depth ?? existing.depthMm,
+      });
+      // A manual edit is itself a human review - only AI-flagged PENDING/REJECTED states should
+      // require the separate AI measurement-review flow, not block a direct correction here.
+      const nextMeasurementSource = input.measurementSource ?? existing.measurementSource;
+      const isHumanSourced = nextMeasurementSource == null
+        || nextMeasurementSource === MeasurementSource.USER
+        || nextMeasurementSource === MeasurementSource.MANUAL_CORRECTION;
       const result = await transaction.requestItem.updateMany({
         where: { id: itemId, requestId, version: input.version },
         data: {
@@ -136,6 +162,10 @@ export class RequestItemsService {
           lengthMm: input.length,
           depthMm: input.depth,
           thicknessMm: input.thickness,
+          calculatedAreaM2: derived.calculatedAreaM2,
+          calculatedLengthM: derived.calculatedLengthM,
+          calculatedVolumeM3: derived.calculatedVolumeM3,
+          measurementStatus: isHumanSourced ? MeasurementStatus.APPROVED : undefined,
           updatedByUserId: authenticatedActor.sub,
           version: { increment: 1 },
         },
@@ -231,6 +261,32 @@ export class RequestItemsService {
       throw new NotFoundException('Request item not found');
     }
     return item;
+  }
+
+  // Mirrors the AI analysis pipeline's derivation (analysis-job.runner.ts) so manually-entered
+  // dimensions get the same calculatedAreaM2/LengthM/VolumeM3 the pricing engine requires.
+  private computeDerivedMeasurements(input: {
+    widthMm?: Prisma.Decimal.Value | null;
+    heightMm?: Prisma.Decimal.Value | null;
+    lengthMm?: Prisma.Decimal.Value | null;
+    depthMm?: Prisma.Decimal.Value | null;
+  }) {
+    const width = input.widthMm != null ? new Prisma.Decimal(input.widthMm) : undefined;
+    const height = input.heightMm != null ? new Prisma.Decimal(input.heightMm) : undefined;
+    const length = input.lengthMm != null ? new Prisma.Decimal(input.lengthMm) : undefined;
+    const depth = input.depthMm != null ? new Prisma.Decimal(input.depthMm) : undefined;
+
+    const calculatedAreaM2 = width !== undefined && height !== undefined
+      ? width.mul(height).div(1_000_000).toDecimalPlaces(6, Prisma.Decimal.ROUND_HALF_UP)
+      : undefined;
+    const calculatedLengthM = length !== undefined
+      ? length.div(1000).toDecimalPlaces(6, Prisma.Decimal.ROUND_HALF_UP)
+      : undefined;
+    const calculatedVolumeM3 = width !== undefined && height !== undefined && depth !== undefined
+      ? width.mul(height).mul(depth).div(1_000_000_000).toDecimalPlaces(6, Prisma.Decimal.ROUND_HALF_UP)
+      : undefined;
+
+    return { calculatedAreaM2, calculatedLengthM, calculatedVolumeM3 };
   }
 
   private buildScopeWhere(actor: AuthenticatedUser): Prisma.RequestWhereInput {
