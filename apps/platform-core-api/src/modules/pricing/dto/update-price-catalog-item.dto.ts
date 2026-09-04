@@ -1,5 +1,5 @@
 import { PriceCatalogStatus } from '@prisma/client';
-import { IsEnum, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 
 export class UpdatePriceCatalogItemDto {
   @IsOptional()
@@ -33,6 +33,7 @@ export class UpdatePriceCatalogItemDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(1)
   defaultDiscountRate?: number;
 
   @IsOptional()

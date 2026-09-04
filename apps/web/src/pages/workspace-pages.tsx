@@ -6474,7 +6474,17 @@ function formatMoney(value: number, currency: string): string {
 }
 
 function formatPercent(value: number): string {
-  return `%${value}`
+  const percent = Math.round(value * 10000) / 100
+  return `%${percent}`
+}
+
+// Catalog rows store waste/discount rate as a 0-1 fraction; the form/table work in plain percent (e.g. 5 = %5).
+function fractionToPercentInput(value: string): string {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) {
+    return '0'
+  }
+  return String(Math.round(numeric * 10000) / 100)
 }
 
 interface PriceCatalogFormState {
@@ -6502,8 +6512,8 @@ function buildPriceCatalogForm(row?: ApiPriceCatalogItem): PriceCatalogFormState
       unitPrice: row.unitPrice,
       currency: row.currency,
       minimumOrderAmount: row.minimumOrderAmount ?? '',
-      defaultWasteRate: row.defaultWasteRate,
-      defaultDiscountRate: row.defaultDiscountRate,
+      defaultWasteRate: fractionToPercentInput(row.defaultWasteRate),
+      defaultDiscountRate: fractionToPercentInput(row.defaultDiscountRate),
       status: row.status,
     }
   }
@@ -6585,13 +6595,27 @@ export function FiyatUrunYonetimiPage({ state, onRetry, currentUser, role }: Wor
 
     const unitPrice = parseNumberInput(activeForm.unitPrice)
     const minimumOrderAmount = activeForm.minimumOrderAmount.trim() ? parseNumberInput(activeForm.minimumOrderAmount) : null
-    const defaultWasteRate = parseNumberInput(activeForm.defaultWasteRate)
-    const defaultDiscountRate = parseNumberInput(activeForm.defaultDiscountRate)
+    const defaultWasteRatePercent = parseNumberInput(activeForm.defaultWasteRate)
+    const defaultDiscountRatePercent = parseNumberInput(activeForm.defaultDiscountRate)
 
-    if (unitPrice === null || defaultWasteRate === null || defaultDiscountRate === null) {
+    if (unitPrice === null || defaultWasteRatePercent === null || defaultDiscountRatePercent === null) {
       setFormError('Fiyat, fire ve indirim oranlari sayisal olmalidir.')
       return
     }
+
+    if (defaultWasteRatePercent < 0) {
+      setFormError('Fire orani negatif olamaz.')
+      return
+    }
+
+    if (defaultDiscountRatePercent < 0 || defaultDiscountRatePercent > 100) {
+      setFormError('Indirim orani 0 ile 100 arasinda olmalidir.')
+      return
+    }
+
+    // Inputs are a plain percent (e.g. 5 = %5); storage/calculation engine expect a 0-1 fraction.
+    const defaultWasteRate = defaultWasteRatePercent / 100
+    const defaultDiscountRate = defaultDiscountRatePercent / 100
 
     setIsSaving(true)
     setFormError('')
