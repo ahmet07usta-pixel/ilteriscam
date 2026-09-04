@@ -192,6 +192,8 @@ model User {
   role                     Role                    @default(USER)
   permissions              Json?
   refreshTokenHash         String?
+  previousRefreshTokenHash       String?
+  previousRefreshTokenExpiresAt  DateTime?
   isActive                 Boolean                 @default(true)
   createdAt                DateTime                @default(now())
   updatedAt                DateTime                @updatedAt

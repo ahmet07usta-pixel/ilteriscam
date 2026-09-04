@@ -160,7 +160,7 @@ export class UsersService implements OnModuleInit {
     return user;
   }
 
-  async listUsers(): Promise<Array<Omit<User, 'passwordHash' | 'refreshTokenHash'>>> {
+  async listUsers(): Promise<Array<Omit<User, 'passwordHash' | 'refreshTokenHash' | 'previousRefreshTokenHash' | 'previousRefreshTokenExpiresAt'>>> {
     return this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
@@ -229,7 +229,22 @@ export class UsersService implements OnModuleInit {
   async updateRefreshTokenHash(userId: string, hash: string | null): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
-      data: { refreshTokenHash: hash },
+      // Explicit login/logout/revoke always fully replaces the session - clear any grace-period leftover too.
+      data: { refreshTokenHash: hash, previousRefreshTokenHash: null, previousRefreshTokenExpiresAt: null },
+    });
+  }
+
+  // Used only by refresh-token rotation: keeps the just-rotated-away hash valid for a short grace window so a
+  // client that never received the new Set-Cookie (dropped connection, backgrounded mobile tab, retry) isn't
+  // wrongly treated as having an invalid/stolen token on its next attempt.
+  async rotateRefreshTokenHash(userId: string, previousHash: string, nextHash: string, graceMs: number): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        refreshTokenHash: nextHash,
+        previousRefreshTokenHash: previousHash,
+        previousRefreshTokenExpiresAt: new Date(Date.now() + graceMs),
+      },
     });
   }
 }

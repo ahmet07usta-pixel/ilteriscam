@@ -181,6 +181,71 @@ test('revokes a session and prevents refresh from the invalidated token', async 
   assert.equal(writes.audits[0].action, 'SESSION_REVOKE');
 });
 
+function refreshTestConfig() {
+  return {
+    get: () => undefined,
+    getOrThrow: (key) => ({
+      'auth.accessSecret': 'access-secret',
+      'auth.refreshSecret': 'refresh-secret',
+      'auth.accessTtl': '15m',
+      'auth.refreshTtl': '7d',
+    })[key],
+  };
+}
+
+test('refresh rotates the token and, if retried with the just-rotated-away token, still succeeds inside the grace period', async () => {
+  const rotations = [];
+  const user = { ...producer, refreshTokenHash: await bcrypt.hash('old-refresh-token', 4), previousRefreshTokenHash: null, previousRefreshTokenExpiresAt: null };
+  const usersService = {
+    findById: async (id) => (id === user.id ? user : null),
+    rotateRefreshTokenHash: async (id, previousHash, nextHash, graceMs) => {
+      rotations.push({ id, previousHash, nextHash, graceMs });
+      user.previousRefreshTokenHash = previousHash;
+      user.previousRefreshTokenExpiresAt = new Date(Date.now() + graceMs);
+      user.refreshTokenHash = nextHash;
+    },
+  };
+  const service = new AuthService(usersService, { signAsync: async (payload) => payload.tokenType }, refreshTestConfig(), { resolvePermissions: () => ['productions.read'] }, { record: async () => {} });
+
+  const first = await service.refresh(user.id, 'old-refresh-token', undefined);
+  assert.equal(first.accessToken, 'access');
+  assert.equal(rotations.length, 1);
+  assert.equal(await bcrypt.compare('old-refresh-token', user.previousRefreshTokenHash), true);
+
+  // A mobile client that never received the rotated Set-Cookie (dropped connection, backgrounded tab) retries
+  // with the same token it already had - this must not be treated as an invalid/stolen token.
+  const retry = await service.refresh(user.id, 'old-refresh-token', undefined);
+  assert.equal(retry.accessToken, 'access');
+  assert.equal(rotations.length, 2);
+});
+
+test('refresh rejects the rotated-away token once its grace period has expired', async () => {
+  const user = {
+    ...producer,
+    refreshTokenHash: await bcrypt.hash('current-token', 4),
+    previousRefreshTokenHash: await bcrypt.hash('expired-old-token', 4),
+    previousRefreshTokenExpiresAt: new Date(Date.now() - 1000),
+  };
+  const usersService = {
+    findById: async (id) => (id === user.id ? user : null),
+    rotateRefreshTokenHash: async () => { throw new Error('must not rotate on a rejected refresh'); },
+  };
+  const service = new AuthService(usersService, { signAsync: async (payload) => payload.tokenType }, refreshTestConfig(), { resolvePermissions: () => ['productions.read'] }, { record: async () => {} });
+
+  await assert.rejects(() => service.refresh(user.id, 'expired-old-token', undefined), UnauthorizedException);
+});
+
+test('refresh rejects a token that never matches the current or previous hash', async () => {
+  const user = { ...producer, refreshTokenHash: await bcrypt.hash('current-token', 4), previousRefreshTokenHash: null, previousRefreshTokenExpiresAt: null };
+  const usersService = {
+    findById: async (id) => (id === user.id ? user : null),
+    rotateRefreshTokenHash: async () => { throw new Error('must not rotate on a rejected refresh'); },
+  };
+  const service = new AuthService(usersService, { signAsync: async (payload) => payload.tokenType }, refreshTestConfig(), { resolvePermissions: () => ['productions.read'] }, { record: async () => {} });
+
+  await assert.rejects(() => service.refresh(user.id, 'completely-wrong-token', undefined), UnauthorizedException);
+});
+
 test('lets an admin rotate another user password and invalidates the refresh token', async () => {
   const writes = { refreshTokenHashes: [], audits: [] };
   const targetUser = { ...producer, id: 'target-user', passwordHash: await bcrypt.hash('CurrentPass001', 4), refreshTokenHash: await bcrypt.hash('stale-refresh-token', 4) };

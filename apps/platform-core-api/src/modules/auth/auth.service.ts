@@ -21,6 +21,9 @@ import { RegisterDto } from './dto/register.dto';
 @Injectable()
 export class AuthService {
   private readonly passwordResetTokens = new Map<string, { userId: string; expiresAt: number; used: boolean }>();
+  // How long a just-rotated-away refresh token is still honored, to absorb a client retry after a dropped
+  // connection/backgrounded tab that never received the newly rotated Set-Cookie.
+  private static readonly REFRESH_TOKEN_GRACE_MS = 60_000;
 
   constructor(
     private readonly usersService: UsersService,
@@ -168,15 +171,31 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token missing');
     }
 
-    const isValid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid refresh token');
+    const isCurrentValid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+
+    if (!isCurrentValid) {
+      // Grace period: the client may be presenting the token from just before the last rotation (it never
+      // received the rotated Set-Cookie due to a dropped connection, a backgrounded mobile tab, or a retry
+      // after what looked like a network failure). Honor a short window instead of treating a legitimate
+      // client as if its token were invalid/stolen.
+      const withinGracePeriod = Boolean(
+        user.previousRefreshTokenHash
+        && user.previousRefreshTokenExpiresAt
+        && user.previousRefreshTokenExpiresAt.getTime() > Date.now()
+        && (await bcrypt.compare(refreshToken, user.previousRefreshTokenHash)),
+      );
+
+      if (!withinGracePeriod) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
     }
 
     const tokens = await this.issueTokens(user);
-    await this.usersService.updateRefreshTokenHash(
+    await this.usersService.rotateRefreshTokenHash(
       user.id,
+      user.refreshTokenHash,
       await bcrypt.hash(tokens.refreshToken, 10),
+      AuthService.REFRESH_TOKEN_GRACE_MS,
     );
 
     return {
