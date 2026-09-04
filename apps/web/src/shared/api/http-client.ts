@@ -75,7 +75,10 @@ export function setExpectedUserId(userId: string | null): void {
 }
 
 export function resolveApiCapabilityUrl(url: string): string {
-  return new URL(url, `${API_BASE_URL}/`).toString()
+  // API_BASE_URL can be a relative path in production (e.g. "/api/v1", same-origin reverse proxy);
+  // `new URL(url, base)` requires base to be absolute, so resolve it against the page origin first.
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1:4100'
+  return new URL(url, new URL(`${API_BASE_URL}/`, origin)).toString()
 }
 
 function notifyAuthExpired(): void {
