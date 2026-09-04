@@ -1543,45 +1543,38 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
   const apiEnabled = Boolean(currentUser?.backendRole)
   const scopedQuickActions = useMemo(() => quickActions.filter((item) => item.roles.includes(role)), [role])
 
-  const [adminStats, setAdminStats] = useState<{
-    requestCount: number
-    quotationCount: number
-    orderCount: number
-    completedOrderCount: number
-    activeCompanyCount: number
-    pendingWorkCount: number
+  const [apiWorkflowData, setApiWorkflowData] = useState<{
+    requests: ApiRequest[]
+    quotations: ApiQuotation[]
+    orders: ApiOrderView[]
+    productions: ApiProductionView[]
+    shipments: ApiShipmentView[]
+    companies: ApiCompany[]
   } | null>(null)
 
   useEffect(() => {
-    if (!apiEnabled || role !== 'ADMIN') {
+    if (!apiEnabled) {
       return
     }
 
     let active = true
     void (async () => {
       try {
-        const [requests, quotations, orders, companies] = await Promise.all([
+        const [requests, quotations, orders, productions, shipments, companies] = await Promise.all([
           requestsApi.list(),
           quotationsApi.list(),
           ordersApi.list(),
-          companiesApi.list(),
+          productionsApi.list(),
+          shipmentsApi.list(),
+          role === 'ADMIN' ? companiesApi.list() : Promise.resolve([]),
         ])
         if (!active) {
           return
         }
-        const pendingWorkCount = requests.filter((row) => row.status === 'OPEN_FOR_QUOTATION').length
-          + orders.filter((row) => row.status === 'PENDING_CONFIRMATION').length
-        setAdminStats({
-          requestCount: requests.length,
-          quotationCount: quotations.length,
-          orderCount: orders.length,
-          completedOrderCount: orders.filter((row) => row.status === 'CONFIRMED').length,
-          activeCompanyCount: companies.filter((row) => row.status === 'ACTIVE').length,
-          pendingWorkCount,
-        })
+        setApiWorkflowData({ requests, quotations, orders, productions, shipments, companies })
       } catch {
         if (active) {
-          setAdminStats(null)
+          setApiWorkflowData(null)
         }
       }
     })()
@@ -1590,6 +1583,87 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
       active = false
     }
   }, [apiEnabled, role])
+
+  // Derives every dashboard metric from the REAL backend rows (already company/role-scoped server-side),
+  // mirroring the same conceptual buckets the local-workflow fallback below uses so both paths render identically.
+  const apiComputed = useMemo(() => {
+    if (!apiWorkflowData) {
+      return null
+    }
+    const { requests, quotations, orders, productions, shipments, companies } = apiWorkflowData
+
+    const deliveredOrderIds = new Set(shipments.filter((row) => row.status === 'DELIVERED').map((row) => row.orderId))
+    const productionByOrderId = new Map(productions.map((row) => [row.order.id, row]))
+
+    const waitingRequestCount = requests.filter((row) => row.status === 'OPEN_FOR_QUOTATION').length
+    const waitingOrderCount = orders.filter((row) => row.status === 'PENDING_CONFIRMATION').length
+    const waitingQuotationCount = quotations.filter((row) => row.status === 'SENT').length
+    const openQuotationCount = quotations.filter((row) => row.status !== 'REJECTED').length
+    const activeProductionCount = productions.filter((row) => row.status !== 'COMPLETED').length
+    const movingShipmentCount = shipments.filter((row) => row.status === 'IN_TRANSIT').length
+    const lateShipmentCount = shipments.filter((row) => row.status !== 'DELIVERED' && new Date(row.estimatedDeliveryAt).getTime() < Date.now()).length
+    const activeOrderCount = orders.filter((row) => row.status !== 'CANCELLED' && !deliveredOrderIds.has(row.id)).length
+    const completedOrderCount = orders.filter((row) => deliveredOrderIds.has(row.id)).length
+    const activeCompanyCount = companies.filter((row) => row.status === 'ACTIVE').length
+    const pendingWorkCount = waitingRequestCount + waitingOrderCount
+    const approvedQuotationValue = quotations
+      .filter((row) => row.status === 'ACCEPTED')
+      .reduce((sum, row) => sum + Number(row.totalAmount ?? 0), 0)
+
+    const regionTotals = new Map<string, number>()
+    requests.forEach((row) => {
+      const key = row.region?.name?.trim() || 'Belirtilmedi'
+      regionTotals.set(key, (regionTotals.get(key) ?? 0) + 1)
+    })
+    const regionTotal = requests.length
+    const regionDistribution = [...regionTotals.entries()]
+      .map(([city, count]) => ({ city, ratio: regionTotal === 0 ? 0 : Math.round((count / regionTotal) * 100) }))
+      .sort((left, right) => right.ratio - left.ratio)
+      .slice(0, 5)
+
+    const quotationBucket = (row: ApiQuotation): 'Hazirlaniyor' | 'Gonderildi' | 'Onaylandi' | 'Reddedildi' => {
+      if (row.status === 'DRAFT') return 'Hazirlaniyor'
+      if (row.status === 'SENT') return 'Gonderildi'
+      if (row.status === 'ACCEPTED') return 'Onaylandi'
+      return 'Reddedildi'
+    }
+    const orderBucket = (row: ApiOrderView): 'Bekliyor' | 'Uretimde' | 'Sevkiyata Hazir' | 'Teslim Edildi' | null => {
+      if (row.status === 'CANCELLED') return null
+      if (deliveredOrderIds.has(row.id)) return 'Teslim Edildi'
+      if (row.status === 'PENDING_CONFIRMATION') return 'Bekliyor'
+      const production = productionByOrderId.get(row.id)
+      return production?.status === 'COMPLETED' ? 'Sevkiyata Hazir' : 'Uretimde'
+    }
+
+    return {
+      requests,
+      quotations,
+      orders,
+      productions,
+      shipments,
+      waitingRequestCount,
+      waitingOrderCount,
+      waitingQuotationCount,
+      openQuotationCount,
+      activeProductionCount,
+      movingShipmentCount,
+      lateShipmentCount,
+      activeOrderCount,
+      completedOrderCount,
+      activeCompanyCount,
+      pendingWorkCount,
+      approvedQuotationValue,
+      regionDistribution,
+      offerDistribution: toDistribution(dashboardOfferStatuses.map((status) => ({
+        label: status,
+        count: quotations.filter((row) => quotationBucket(row) === status).length,
+      }))),
+      orderDistribution: toDistribution(dashboardOrderStatuses.map((status) => ({
+        label: status,
+        count: orders.filter((row) => orderBucket(row) === status).length,
+      }))),
+    }
+  }, [apiWorkflowData])
 
   // The dashboard aggregates the same rows the list screens show, so it must reuse their scoping.
   const scoped = useMemo(() => {
@@ -1607,6 +1681,24 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
   const pendingJobs = useMemo(() => {
     if (role === 'ADMIN') {
       return []
+    }
+
+    if (apiEnabled && apiComputed) {
+      if (role === 'BUYER') {
+        return [
+          { title: 'Teklif Bekleyen Taleplerim', value: apiComputed.waitingRequestCount, detail: 'Uretici yanitini bekliyor', target: 'requests' as ViewKey, priority: 'mid' as const },
+          { title: 'Karar Bekleyen Teklifler', value: apiComputed.waitingQuotationCount, detail: 'Onayinizi bekleyen teklifler', target: 'offers' as ViewKey, priority: 'high' as const },
+          { title: 'Devam Eden Uretimler', value: apiComputed.activeProductionCount, detail: 'Siparislerinizin uretim durumu', target: 'production' as ViewKey, priority: 'low' as const },
+          { title: 'Yoldaki Sevkiyatlar', value: apiComputed.movingShipmentCount, detail: 'Teslimat bekleyen gonderiler', target: 'shipment' as ViewKey, priority: 'low' as const },
+        ]
+      }
+
+      return [
+        { title: 'Teklif Bekleyen Talepler', value: apiComputed.waitingRequestCount, detail: 'Teklif hazirlanmasi bekleniyor', target: 'requests' as ViewKey, priority: 'mid' as const },
+        { title: 'Onay Bekleyen Siparisler', value: apiComputed.waitingOrderCount, detail: 'Uretime alinmayi bekliyor', target: 'orders' as ViewKey, priority: 'mid' as const },
+        { title: 'Devam Eden Uretimler', value: apiComputed.activeProductionCount, detail: 'Tamamlanmamis is emirleri', target: 'production' as ViewKey, priority: 'high' as const },
+        { title: 'Geciken Sevkiyatlar', value: apiComputed.lateShipmentCount, detail: 'Termin disina cikan gonderiler', target: 'shipment' as ViewKey, priority: 'low' as const },
+      ]
     }
 
     const waitingRequests = scoped.requests.filter((row) => row.status === 'Bekleyen').length
@@ -1631,7 +1723,7 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
       { title: 'Devam Eden Uretimler', value: activeProductions, detail: 'Tamamlanmamis is emirleri', target: 'production' as ViewKey, priority: 'high' as const },
       { title: 'Geciken Sevkiyatlar', value: lateShipments, detail: 'Termin disina cikan gonderiler', target: 'shipment' as ViewKey, priority: 'low' as const },
     ]
-  }, [role, scoped])
+  }, [role, scoped, apiEnabled, apiComputed])
 
   const perfCards = useMemo(() => {
     const completedOrders = scoped.orders.filter((row) => row.status === 'Teslim Edildi').length
@@ -1643,14 +1735,14 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
     const formattedValue = `TRY ${Math.round(approvedValue).toLocaleString('tr-TR')}`
 
     if (role === 'ADMIN') {
-      if (apiEnabled && adminStats) {
+      if (apiEnabled && apiComputed) {
         return [
-          { label: 'Toplam Talep', value: String(adminStats.requestCount), trend: 'Platform geneli (gercek veri)' },
-          { label: 'Toplam Teklif', value: String(adminStats.quotationCount), trend: 'Platform geneli (gercek veri)' },
-          { label: 'Toplam Siparis', value: String(adminStats.orderCount), trend: 'Platform geneli (gercek veri)' },
-          { label: 'Aktif Firma', value: String(adminStats.activeCompanyCount), trend: 'Islem goren firmalar' },
-          { label: 'Bekleyen Isler', value: String(adminStats.pendingWorkCount), trend: 'Mudahale gerekebilir' },
-          { label: 'Onaylanan Siparisler', value: String(adminStats.completedOrderCount), trend: 'Uretime alinabilir' },
+          { label: 'Toplam Talep', value: String(apiComputed.requests.length), trend: 'Platform geneli (gercek veri)' },
+          { label: 'Toplam Teklif', value: String(apiComputed.quotations.length), trend: 'Platform geneli (gercek veri)' },
+          { label: 'Toplam Siparis', value: String(apiComputed.orders.length), trend: 'Platform geneli (gercek veri)' },
+          { label: 'Aktif Firma', value: String(apiComputed.activeCompanyCount), trend: 'Islem goren firmalar' },
+          { label: 'Bekleyen Isler', value: String(apiComputed.pendingWorkCount), trend: 'Mudahale gerekebilir' },
+          { label: 'Onaylanan Siparisler', value: String(apiComputed.completedOrderCount), trend: 'Uretime alinabilir' },
         ]
       }
 
@@ -1676,6 +1768,17 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
     }
 
     if (role === 'MANUFACTURER') {
+      if (apiEnabled && apiComputed) {
+        return [
+          { label: 'Gelen Talepler', value: String(apiComputed.requests.length), trend: 'Firmaniza yonlendirilen' },
+          { label: 'Acik Teklifler', value: String(apiComputed.openQuotationCount), trend: 'Surecteki teklifler' },
+          { label: 'Aktif Siparisler', value: String(apiComputed.activeOrderCount), trend: 'Teslim edilmemis' },
+          { label: 'Devam Eden Uretimler', value: String(apiComputed.activeProductionCount), trend: 'Hatlardaki is emirleri' },
+          { label: 'Yoldaki Sevkiyatlar', value: String(apiComputed.movingShipmentCount), trend: 'Dagitimda olanlar' },
+          { label: 'Tamamlanan Siparisler', value: String(apiComputed.completedOrderCount), trend: 'Teslim edilenler' },
+        ]
+      }
+
       return [
         { label: 'Gelen Talepler', value: String(scoped.requests.length), trend: 'Firmaniza yonlendirilen' },
         { label: 'Acik Teklifler', value: String(scoped.offers.filter((row) => row.status !== 'Reddedildi').length), trend: 'Surecteki teklifler' },
@@ -1683,6 +1786,17 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
         { label: 'Devam Eden Uretimler', value: String(activeProductions), trend: 'Hatlardaki is emirleri' },
         { label: 'Yoldaki Sevkiyatlar', value: String(movingShipments), trend: 'Dagitimda olanlar' },
         { label: 'Tamamlanan Siparisler', value: String(completedOrders), trend: 'Teslim edilenler' },
+      ]
+    }
+
+    if (apiEnabled && apiComputed) {
+      return [
+        { label: 'Taleplerim', value: String(apiComputed.requests.length), trend: 'Acilan talep sayisi' },
+        { label: 'Gelen Teklifler', value: String(apiComputed.quotations.length), trend: 'Firmaniza sunulanlar' },
+        { label: 'Aktif Siparislerim', value: String(apiComputed.activeOrderCount), trend: 'Devam eden siparisler' },
+        { label: 'Devam Eden Uretimler', value: String(apiComputed.activeProductionCount), trend: 'Uretimdeki isler' },
+        { label: 'Yoldaki Sevkiyatlar', value: String(apiComputed.movingShipmentCount), trend: 'Teslimat bekleyenler' },
+        { label: 'Onayladigim Teklif Tutari', value: `TRY ${Math.round(apiComputed.approvedQuotationValue).toLocaleString('tr-TR')}`, trend: 'Toplam onayli tutar' },
       ]
     }
 
@@ -1694,25 +1808,33 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
       { label: 'Yoldaki Sevkiyatlar', value: String(movingShipments), trend: 'Teslimat bekleyenler' },
       { label: 'Onayladigim Teklif Tutari', value: formattedValue, trend: 'Toplam onayli tutar' },
     ]
-  }, [role, scoped, apiEnabled, adminStats])
+  }, [role, scoped, apiEnabled, apiComputed])
 
-  const offerDistribution = useMemo(
-    () => toDistribution(dashboardOfferStatuses.map((status) => ({
+  const offerDistribution = useMemo(() => {
+    if (apiEnabled && apiComputed) {
+      return apiComputed.offerDistribution
+    }
+    return toDistribution(dashboardOfferStatuses.map((status) => ({
       label: status,
       count: scoped.offers.filter((row) => row.status === status).length,
-    }))),
-    [scoped.offers],
-  )
+    })))
+  }, [scoped.offers, apiEnabled, apiComputed])
 
-  const orderDistribution = useMemo(
-    () => toDistribution(dashboardOrderStatuses.map((status) => ({
+  const orderDistribution = useMemo(() => {
+    if (apiEnabled && apiComputed) {
+      return apiComputed.orderDistribution
+    }
+    return toDistribution(dashboardOrderStatuses.map((status) => ({
       label: status,
       count: scoped.orders.filter((row) => row.status === status).length,
-    }))),
-    [scoped.orders],
-  )
+    })))
+  }, [scoped.orders, apiEnabled, apiComputed])
 
   const regionDistribution = useMemo(() => {
+    if (apiEnabled && apiComputed) {
+      return apiComputed.regionDistribution
+    }
+
     const totals = new Map<string, number>()
     scoped.requests.forEach((row) => {
       const key = row.region?.trim() || 'Belirtilmedi'
@@ -1724,7 +1846,7 @@ export function DashboardPage({ state, onRetry, onNavigate, role, currentUser, w
       .map(([city, count]) => ({ city, ratio: total === 0 ? 0 : Math.round((count / total) * 100) }))
       .sort((left, right) => right.ratio - left.ratio)
       .slice(0, 5)
-  }, [scoped.requests])
+  }, [scoped.requests, apiEnabled, apiComputed])
 
   return (
     <section className="workspace-main dashboard-main">
