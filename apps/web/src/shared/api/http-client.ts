@@ -178,7 +178,12 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
       response = await execute()
     } catch (error) {
       setAccessToken(null)
-      notifyAuthExpired()
+      // Only a definitive server rejection (refresh token invalid/expired/missing) means the session is really over.
+      // A raw network failure (offline blip, mobile tab backgrounded mid-request) is not proof of that - don't force
+      // a global logout for it, just let the caller see the failed request like any other transient error.
+      if (error instanceof ApiError) {
+        notifyAuthExpired()
+      }
       throw error
     }
   }

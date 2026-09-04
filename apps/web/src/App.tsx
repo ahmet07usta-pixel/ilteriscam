@@ -21,7 +21,7 @@ import {
   type WorkflowStore,
 } from './pages/workspace-pages'
 import { loginWithIdentifier, logoutFromBackend, registerCompanyAccount, requestPasswordReset } from './shared/data/auth'
-import { apiRequest, AUTH_EXPIRED_EVENT, AUTH_SESSION_REPLACED_EVENT, setExpectedUserId } from './shared/api/http-client'
+import { apiRequest, ApiError, AUTH_EXPIRED_EVENT, AUTH_SESSION_REPLACED_EVENT, setExpectedUserId } from './shared/api/http-client'
 import { notificationsApi } from './shared/api/notifications-api'
 import { notifications as sourceNotifications } from './shared/data/mock'
 import type { ToastItem } from './shared/ui/toast'
@@ -491,7 +491,7 @@ function App() {
   useEffect(() => {
     let active = true
 
-    const hydrateSession = async () => {
+    const hydrateSession = async (attempt = 1) => {
       const storedUser = readStoredAuthUser()
 
       // Local sessions are self-contained; only backend-issued ones need (and are allowed) a server round trip.
@@ -518,7 +518,12 @@ function App() {
           memberships?: AuthenticatedUser['memberships']
         }>('/auth/me')
 
-        if (!active || !profile?.id) {
+        if (!active) {
+          return
+        }
+
+        if (!profile?.id) {
+          setIsAuthHydrated(true)
           return
         }
 
@@ -597,7 +602,21 @@ function App() {
 
           return nextUser
         })
-      } catch {
+        if (active) {
+          setIsAuthHydrated(true)
+        }
+      } catch (error) {
+        // A raw network failure (offline blip, mobile tab backgrounded mid-request) is not proof the session is
+        // invalid - retry once before concluding the user is logged out, since this is common on mobile networks.
+        if (active && attempt === 1 && !(error instanceof ApiError)) {
+          window.setTimeout(() => {
+            if (active) {
+              void hydrateSession(2)
+            }
+          }, 1200)
+          return
+        }
+
         if (active) {
           if (isBackendAuthMode()) {
             persistStoredAuthUser(null)
@@ -605,9 +624,6 @@ function App() {
           } else {
             setCurrentUser((previous) => previous ?? storedUser)
           }
-        }
-      } finally {
-        if (active) {
           setIsAuthHydrated(true)
         }
       }
