@@ -1,5 +1,6 @@
 import type {
   ApiCalculationSnapshotLine,
+  ApiUnpricedCalculationSnapshotLine,
   ApiQuotationCalculation,
   ApiQuotationItem,
   CalculationStatus,
@@ -85,6 +86,19 @@ function mapSnapshotLine(value: unknown): ApiCalculationSnapshotLine {
   }
 }
 
+function mapUnpricedSnapshotLine(value: unknown): ApiUnpricedCalculationSnapshotLine {
+  const line = record(value)
+  const requestItem = record(line.requestItem)
+  return {
+    requestItemId: text(requestItem.id),
+    lineNumber: numberValue(requestItem.lineNumber),
+    description: text(requestItem.description),
+    productType: text(requestItem.productType),
+    productCode: nullableText(requestItem.productCode),
+    reason: text(line.reason),
+  }
+}
+
 function mapCalculation(value: unknown): ApiQuotationCalculation {
   const calculation = record(value)
   const snapshot = record(calculation.snapshotPayload)
@@ -111,6 +125,9 @@ function mapCalculation(value: unknown): ApiQuotationCalculation {
     createdAt: text(calculation.createdAt),
     items: Array.isArray(calculation.items) ? calculation.items.map(mapItem) : [],
     snapshotLines: Array.isArray(snapshot.lines) ? snapshot.lines.map(mapSnapshotLine) : [],
+    unpricedSnapshotLines: Array.isArray(snapshot.unpricedLines)
+      ? snapshot.unpricedLines.map(mapUnpricedSnapshotLine)
+      : [],
   }
 }
 

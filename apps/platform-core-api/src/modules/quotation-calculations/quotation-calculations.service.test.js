@@ -280,6 +280,37 @@ test('regional adjustment is applied and snapshotted', async () => {
   assert.equal(result.snapshotPayload.lines[0].pricing.regionalAdjustment.value, '0.1');
 });
 
+test('calculates catalog-matched items and records unmatched items without aborting the quotation', async () => {
+  const unmatched = approvedItem({
+    id: 'item-unmatched',
+    lineNumber: 2,
+    description: 'Isicam Konfor paneli',
+    productCode: null,
+    productType: 'Isicam Konfor',
+  });
+  const harness = createHarness({ items: [approvedItem(), unmatched] });
+
+  const result = await harness.service.generate('quotation-1', actor);
+
+  assert.equal(result.totalAmount.toFixed(2), '192.00');
+  assert.equal(harness.quotationItems.length, 1);
+  assert.equal(result.snapshotPayload.lines.length, 1);
+  assert.equal(result.snapshotPayload.unpricedLines.length, 1);
+  assert.equal(result.snapshotPayload.unpricedLines[0].requestItem.id, 'item-unmatched');
+  assert.match(result.snapshotPayload.unpricedLines[0].reason, /No active price catalog item matches/);
+});
+
+test('rejects a calculation when no approved request item matches the manufacturer price catalog', async () => {
+  const harness = createHarness({ catalogs: [], items: [approvedItem({ productCode: null, productType: 'Isicam Konfor' })] });
+
+  await assert.rejects(
+    harness.service.generate('quotation-1', actor),
+    (error) => error instanceof BadRequestException
+      && error.message === 'Fiyat listenizde talepteki hicbir kalemle eslesen aktif urun bulunamadi.',
+  );
+  assert.equal(harness.calculations.length, 0);
+});
+
 test('different input cannot replace an existing finalized calculation', async () => {
   const finalized = {
     id: 'old-finalized', quotationId: 'quotation-1', requestId: 'request-1',

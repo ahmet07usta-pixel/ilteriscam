@@ -3983,6 +3983,17 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
               {calculationDetail && (
                 <section className="calculation-snapshot" aria-label="Hesaplama Snapshot">
                   <header><h4>Snapshot v{calculationDetail.calculationVersion}</h4><span>Engine {calculationDetail.engineVersion} / Schema {calculationDetail.snapshotSchemaVersion}</span></header>
+                  {calculationDetail.unpricedSnapshotLines.length > 0 && (
+                    <section className="request-items-empty error" aria-label="Fiyat Listesinde Eslesmeyen Kalemler">
+                      <strong>{calculationDetail.unpricedSnapshotLines.length} kalem fiyata dahil edilmedi.</strong>
+                      <p>Bu kalemler icin fiyat listenizde aktif bir urun bulunmadigi icin toplam sadece eslesen kalemlerden hesaplandi.</p>
+                      <ul>
+                        {calculationDetail.unpricedSnapshotLines.map((line) => (
+                          <li key={line.requestItemId}><strong>{line.description}</strong> - {line.productType}{line.productCode ? ` (${line.productCode})` : ''}</li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
                   {calculationDetail.snapshotLines.length === 0 ? (
                     <div className="request-items-empty">Snapshot satiri bulunmuyor.</div>
                   ) : (

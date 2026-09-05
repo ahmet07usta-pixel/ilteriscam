@@ -389,6 +389,15 @@ export interface ApiCalculationSnapshotLine {
   currency: string
 }
 
+export interface ApiUnpricedCalculationSnapshotLine {
+  requestItemId: string
+  lineNumber: number
+  description: string
+  productType: string
+  productCode: string | null
+  reason: string
+}
+
 export interface ApiQuotationCalculation {
   id: string
   quotationId: string
@@ -412,6 +421,7 @@ export interface ApiQuotationCalculation {
   createdAt: string
   items: ApiQuotationItem[]
   snapshotLines: ApiCalculationSnapshotLine[]
+  unpricedSnapshotLines: ApiUnpricedCalculationSnapshotLine[]
 }
 
 export interface ApiOrder {

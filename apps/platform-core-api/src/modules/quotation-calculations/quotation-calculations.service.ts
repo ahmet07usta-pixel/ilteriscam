@@ -55,6 +55,7 @@ export class QuotationCalculationsService {
 
         const generatedAt = new Date();
         const lineSnapshots = [];
+        const unpricedLines = [];
         for (const requestItem of requestItems) {
           let selection: Awaited<ReturnType<PricingService['selectCatalog']>>;
           try {
@@ -68,9 +69,11 @@ export class QuotationCalculationsService {
             );
           } catch (error) {
             if (error instanceof BadRequestException) {
-              throw new BadRequestException(
-                `Kalem ${requestItem.lineNumber} (${requestItem.description}): ${error.message}`,
-              );
+              unpricedLines.push({
+                requestItem: this.requestItemSnapshot(requestItem),
+                reason: error.message,
+              });
+              continue;
             }
             throw error;
           }
@@ -92,6 +95,11 @@ export class QuotationCalculationsService {
             result: this.lineResultSnapshot(line),
           });
         }
+        if (lineSnapshots.length === 0) {
+          throw new BadRequestException(
+            'Fiyat listenizde talepteki hicbir kalemle eslesen aktif urun bulunamadi.',
+          );
+        }
 
         const snapshotPayload = {
           schemaVersion: 1,
@@ -105,6 +113,7 @@ export class QuotationCalculationsService {
             regionId: quotation.request.regionId,
           },
           lines: lineSnapshots,
+          unpricedLines,
         };
         const inputHash = this.hashSnapshot(snapshotPayload);
         const existing = await transaction.quotationCalculation.findUnique({
