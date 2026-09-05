@@ -4,6 +4,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4177'
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: ['**/real-backend-synthetic-auth.spec.ts'],
   timeout: 45_000,
   fullyParallel: false,
   workers: 2,

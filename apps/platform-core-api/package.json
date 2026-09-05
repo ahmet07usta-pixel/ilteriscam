@@ -13,7 +13,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "seed:synthetic-auth": "node scripts/seed-synthetic-auth-fixture.js",
     "lint": "tsc --noEmit",
-    "test": "echo \"No tests configured yet\""
+    "test": "node --test --require ts-node/register/transpile-only \"src/**/*.test.js\""
   },
   "keywords": [],
   "author": "",
