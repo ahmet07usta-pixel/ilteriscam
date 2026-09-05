@@ -176,7 +176,7 @@ test('lists calculation revisions and loads a safe authoritative snapshot detail
   expect(detailCalls).toBe(1)
 })
 
-test('generates without a body, finalizes with authoritative CAS, and only refetches API state', async ({ page }) => {
+test('applies a Snapshot without a body, finalizes with authoritative CAS, and only refetches API state', async ({ page }) => {
   let currentQuotation = quotation({ activeCalculationId: null, totalAmount: '100.00' })
   let calculations: ReturnType<typeof calculation>[] = []
   let generateBody: string | null | undefined
@@ -202,6 +202,9 @@ test('generates without a body, finalizes with authoritative CAS, and only refet
       calculations = [calculation({ id: 'calculation-generated', status: 'GENERATED', finalizedAt: null })]
       return fulfillJson(route, calculations[0], 201)
     }
+    if (path === '/api/v1/quotations/quotation-1/calculations/calculation-generated' && request.method() === 'GET') {
+      return fulfillJson(route, calculations[0])
+    }
     if (path === '/api/v1/quotations/quotation-1/calculations/calculation-generated/finalize') {
       finalizeBody = request.postDataJSON() as Record<string, unknown>
       calculations = [calculation({ id: 'calculation-generated' })]
@@ -214,16 +217,16 @@ test('generates without a body, finalizes with authoritative CAS, and only refet
   await setSession(page)
   const detail = await openQuotationDetail(page)
   const workflowBefore = await page.evaluate(() => window.localStorage.getItem('dijitalcam.workflowStore'))
-  await detail.getByRole('button', { name: 'Hesaplama Olustur' }).click()
+  await detail.getByRole('button', { name: 'Snapshot ile Fiyati Hesapla' }).click()
   await expect(detail.getByRole('region', { name: 'Teklif Hesaplamalari' })).toContainText('v3')
   expect(generateBody).toBeNull()
 
-  await detail.getByRole('button', { name: 'Finalize Et' }).click()
   await expect(detail).toContainText('Finalize edildi')
   await expect(detail.getByRole('region', { name: 'Teklif Hesaplamalari' })).toContainText('Aktif')
+  await expect(detail.getByRole('region', { name: 'Hesaplama Snapshot' })).toContainText('CAT-GLASS')
   expect(finalizeBody).toEqual({ quotationVersion: 7, calculationVersion: 3 })
-  expect(quotationDetailCalls).toBeGreaterThanOrEqual(3)
-  expect(calculationListCalls).toBeGreaterThanOrEqual(3)
+  expect(quotationDetailCalls).toBeGreaterThanOrEqual(2)
+  expect(calculationListCalls).toBeGreaterThanOrEqual(2)
   const workflowAfter = await page.evaluate(() => window.localStorage.getItem('dijitalcam.workflowStore'))
   expect(workflowAfter).toBe(workflowBefore)
 })

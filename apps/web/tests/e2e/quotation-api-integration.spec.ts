@@ -184,6 +184,97 @@ test('creates a request quotation with the exact backend DTO and refetches the r
   await expect(requestDetail.locator('.quotation-api-table')).toContainText('QUO-API-1')
 })
 
+test('applies the producer price catalog through one snapshot action and updates the draft total', async ({ page }) => {
+  const pricingPermissions = [
+    ...sessionUser.permissions,
+    'quotation-calculations.read',
+    'quotation-calculations.create',
+    'quotation-calculations.finalize',
+  ]
+  const current = quotation()
+  const calculated = {
+    id: 'calculation-1',
+    quotationId: current.id,
+    requestId: current.requestId,
+    quotationRevisionNumber: 1,
+    calculationVersion: 1,
+    engineVersion: '1.0.0',
+    inputHash: 'input-hash',
+    currency: 'TRY',
+    subtotalAmount: '13600.00',
+    wasteAmount: '0.00',
+    regionalAdjustmentAmount: '0.00',
+    discountAmount: '0.00',
+    taxAmount: '0.00',
+    totalAmount: '13600.00',
+    snapshotSchemaVersion: 1,
+    snapshotHash: 'snapshot-hash',
+    status: 'GENERATED',
+    createdByUserId: sessionUser.id,
+    finalizedAt: null,
+    createdAt: '2026-09-05T12:00:00.000Z',
+    items: [],
+    snapshotPayload: {
+      lines: [{
+        requestItem: { id: 'item-1', lineNumber: 1, description: 'Isicam paneli', productType: 'Isicam', productCode: 'ISICIFT', measurementStatus: 'APPROVED' },
+        pricing: { catalog: { productCode: 'ISICIFT' } },
+        result: { quantity: '10', unit: 'M2', unitPrice: '1360', wasteRate: '0', discountRate: '0', totalAmount: '13600', currency: 'TRY' },
+      }],
+    },
+  }
+  let generated = false
+  let finalized = false
+
+  await page.route(`${apiBase}/requests/request-1`, async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(apiRequest()) })
+  })
+  await page.route(`${apiBase}/quotations**`, async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path === '/api/v1/quotations' && request.method() === 'GET') {
+      const row = finalized ? quotation({ totalAmount: '13600.00', activeCalculationId: calculated.id, version: 2 }) : current
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([row]) })
+      return
+    }
+    if (path === '/api/v1/quotations/quotation-1' && request.method() === 'GET') {
+      const detail = finalized ? quotation({ totalAmount: '13600.00', activeCalculationId: calculated.id, version: 2 }) : current
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(detail) })
+      return
+    }
+    if (path === '/api/v1/quotations/quotation-1/calculations' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(generated ? [calculated] : []) })
+      return
+    }
+    if (path === '/api/v1/quotations/quotation-1/calculations/calculation-1' && request.method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(calculated) })
+      return
+    }
+    if (path === '/api/v1/quotations/quotation-1/calculations' && request.method() === 'POST') {
+      generated = true
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(calculated) })
+      return
+    }
+    if (path === '/api/v1/quotations/quotation-1/calculations/calculation-1/finalize' && request.method() === 'POST') {
+      expect(request.postDataJSON()).toEqual({ quotationVersion: 1, calculationVersion: 1 })
+      finalized = true
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...calculated, status: 'FINALIZED', finalizedAt: '2026-09-05T12:00:01.000Z' }) })
+      return
+    }
+    await route.abort()
+  })
+
+  await setSession(page, pricingPermissions)
+  await page.goto('/app/teklifler')
+  await page.locator('.quotation-api-table tbody tr').getByRole('button', { name: 'Goruntule' }).click()
+  const detail = page.getByRole('region', { name: 'Teklif Detayi' })
+  await detail.getByRole('button', { name: 'Snapshot ile Fiyati Hesapla' }).click()
+  await expect(detail).toContainText('TRY 13600.00')
+  await expect(page.getByRole('status')).toContainText('teklif tutari fiyat listenize gore guncellendi')
+  await expect(detail.getByRole('heading', { name: 'Snapshot v1' })).toBeVisible()
+  expect(generated).toBe(true)
+  expect(finalized).toBe(true)
+})
+
 test('uses authoritative versions for update, send, revise, withdraw, accept, and reject', async ({ page }) => {
   let quotations = [
     quotation(),

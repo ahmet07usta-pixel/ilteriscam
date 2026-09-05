@@ -3723,13 +3723,18 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
     ])
   }
 
-  const handleGenerateCalculation = async (quotation: QuotationView) => {
+  const handleApplyPricingSnapshot = async (quotation: QuotationView) => {
     if (calculationOperation) return
-    setCalculationOperation('generate')
+    setCalculationOperation('apply-snapshot')
     try {
-      await quotationCalculationsApi.generate(quotation.id)
-      setFeedback('Hesaplama backend tarafinda olusturuldu.')
+      const generated = await quotationCalculationsApi.generate(quotation.id)
+      await quotationCalculationsApi.finalize(quotation.id, generated.id, {
+        quotationVersion: quotation.version,
+        calculationVersion: generated.calculationVersion,
+      })
       await refreshCalculationAuthority(quotation)
+      await loadCalculationDetail(quotation.id, generated.id)
+      setFeedback('Snapshot olusturuldu; teklif tutari fiyat listenize gore guncellendi.')
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         setFeedback('Hesaplama baska bir islem nedeniyle degisti. Guncel veri yeniden yuklendi.')
@@ -3806,21 +3811,7 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
           validUntil: new Date(`${form.validUntil}T23:59:59.999Z`).toISOString(),
           notes: optionalText(form.notes),
         })
-        if (canCreateCalculations && canFinalizeCalculations) {
-          try {
-            const generated = await quotationCalculationsApi.generate(created.id)
-            await quotationCalculationsApi.finalize(created.id, generated.id, {
-              quotationVersion: created.version,
-              calculationVersion: generated.calculationVersion,
-            })
-            setFeedback('Teklif olusturuldu; fiyat, fiyat listenize gore otomatik hesaplandi.')
-          } catch (calculationError) {
-            // Best effort: producer can still generate/finalize manually from the quotation detail view below.
-            setFeedback(`Teklif olusturuldu. Otomatik fiyat hesaplanamadi: ${calculationErrorMessage(calculationError)}`)
-          }
-        } else {
-          setFeedback('Teklif olusturuldu.')
-        }
+        setFeedback('Teklif taslagi olusturuldu. Snapshot ile fiyat listenizden tutari hesaplayabilirsiniz.')
         await loadDetail(created.id)
       }
       setForm(null)
@@ -3941,9 +3932,9 @@ function QuotationApiWorkspace({ currentUser, requestId, request, embedded = fal
             <section className="quotation-calculations full-width" aria-label="Teklif Hesaplamalari">
               <header className="request-items-head">
                 <div><h4>Hesaplamalar</h4><p>Backend snapshot ve fiyatlandirma kayitlari</p></div>
-                {detail.status === 'DRAFT' && canCreateCalculations && (
-                  <button type="button" className="solid-btn" disabled={Boolean(calculationOperation)} onClick={() => void handleGenerateCalculation(detail)}>
-                    {calculationOperation === 'generate' ? 'Olusturuluyor...' : 'Hesaplama Olustur'}
+                {detail.status === 'DRAFT' && canCreateCalculations && canFinalizeCalculations && (
+                  <button type="button" className="solid-btn" disabled={Boolean(calculationOperation)} onClick={() => void handleApplyPricingSnapshot(detail)}>
+                    {calculationOperation === 'apply-snapshot' ? 'Hesaplaniyor...' : 'Snapshot ile Fiyati Hesapla'}
                   </button>
                 )}
               </header>
