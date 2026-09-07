@@ -4259,20 +4259,16 @@ th {
 }
 
 .logo-mark {
-  width: 3.4rem;
-  height: 3.4rem;
-  border-radius: 14px;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  background: radial-gradient(120% 100% at 50% 0%, #1e293b 0%, #0f172a 100%);
-  position: relative;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .logo-mark svg {
-  width: 2.3rem;
-  height: 2.3rem;
+  width: 2.8rem;
+  height: 2.8rem;
+  filter: drop-shadow(0 3px 10px rgba(2, 132, 199, 0.35));
 }
 
 .auth-form {
