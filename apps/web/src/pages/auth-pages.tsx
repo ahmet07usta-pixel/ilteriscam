@@ -54,6 +54,20 @@ export function LoginPage({ onLogin, initialNotice }: AuthPageProps) {
         </div>
 
         <div className="showcase-content">
+          <div className="showcase-brand-header">
+            <svg className="showcase-logo-svg" width="44" height="44" viewBox="0 0 54 54" fill="none" aria-hidden="true">
+              <g transform="translate(6, 2)">
+                <polygon points="23,0 34,5 26,13 15,8" fill="#38BDF8" opacity="0.95" />
+                <polygon points="8,18 24,14 19,34 3,30" fill="#38BDF8" fillOpacity="0.35" stroke="#38BDF8" strokeWidth="1.5" />
+                <polygon points="26,14 41,18 36,46 21,40" fill="#0284C7" fillOpacity="0.75" stroke="#7DD3FC" strokeWidth="1.5" />
+                <polygon points="12,38 22,35 34,52 18,55" fill="#0369A1" fillOpacity="0.9" />
+                <line x1="24" y1="14" x2="21" y2="40" stroke="#FFFFFF" strokeWidth="2" strokeOpacity="0.9" />
+              </g>
+            </svg>
+            <strong className="showcase-brand-title">
+              İLTERİŞ <span className="brand-cam-tag">CAM</span>
+            </strong>
+          </div>
           <p className="eyebrow">İlteriş Cam Platformu</p>
           <h1>Cam Sektorunun Yeni Nesil B2B Platformu</h1>
           <p className="showcase-copy">
@@ -313,11 +327,24 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
   return (
     <main className="auth-layout">
       <section className="glass-card auth-card">
-        <div>
-          <p className="eyebrow">İlteriş Cam Platformu</p>
-          <h1>Firma hesabinizi olusturun</h1>
-          <p>Uretici tekliflerini karsilastirmak ve talep olusturmak icin firma hesabinizi birkac adimda acin.</p>
-        </div>
+        <header className="login-head">
+          <div className="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 54 54" fill="none">
+              <g transform="translate(6, 2)">
+                <polygon points="23,0 34,5 26,13 15,8" fill="#38BDF8" opacity="0.95" />
+                <polygon points="8,18 24,14 19,34 3,30" fill="#38BDF8" fillOpacity="0.35" stroke="#38BDF8" strokeWidth="1.5" />
+                <polygon points="26,14 41,18 36,46 21,40" fill="#0284C7" fillOpacity="0.75" stroke="#7DD3FC" strokeWidth="1.5" />
+                <polygon points="12,38 22,35 34,52 18,55" fill="#0369A1" fillOpacity="0.9" />
+                <line x1="24" y1="14" x2="21" y2="40" stroke="#FFFFFF" strokeWidth="2" strokeOpacity="0.9" />
+              </g>
+            </svg>
+          </div>
+          <div>
+            <p className="eyebrow">İlteriş Cam Platformu</p>
+            <h1>Firma hesabinizi olusturun</h1>
+            <p>Uretici tekliflerini karsilastirmak ve talep olusturmak icin firma hesabinizi birkac adimda acin.</p>
+          </div>
+        </header>
         <form
           className="auth-form"
           noValidate
@@ -419,13 +446,26 @@ export function ForgotPasswordPage({ onRequestPasswordReset }: ForgotPasswordPag
   return (
     <main className="auth-layout">
       <section className="glass-card auth-card">
-        <div>
-          <p className="eyebrow">Hesap Kurtarma</p>
-          <h1>Sifre yenileme talebi gonder</h1>
-          <p>
-            Kurumsal e-posta adresinizi girin; talebiniz platform yoneticisine iletilir ve yoneticimiz sizinle iletisime gecerek sifrenizi sifirlar.
-          </p>
-        </div>
+        <header className="login-head">
+          <div className="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 54 54" fill="none">
+              <g transform="translate(6, 2)">
+                <polygon points="23,0 34,5 26,13 15,8" fill="#38BDF8" opacity="0.95" />
+                <polygon points="8,18 24,14 19,34 3,30" fill="#38BDF8" fillOpacity="0.35" stroke="#38BDF8" strokeWidth="1.5" />
+                <polygon points="26,14 41,18 36,46 21,40" fill="#0284C7" fillOpacity="0.75" stroke="#7DD3FC" strokeWidth="1.5" />
+                <polygon points="12,38 22,35 34,52 18,55" fill="#0369A1" fillOpacity="0.9" />
+                <line x1="24" y1="14" x2="21" y2="40" stroke="#FFFFFF" strokeWidth="2" strokeOpacity="0.9" />
+              </g>
+            </svg>
+          </div>
+          <div>
+            <p className="eyebrow">Hesap Kurtarma</p>
+            <h1>Sifre yenileme talebi gonder</h1>
+            <p>
+              Kurumsal e-posta adresinizi girin; talebiniz platform yoneticisine iletilir ve yoneticimiz sizinle iletisime gecerek sifrenizi sifirlar.
+            </p>
+          </div>
+        </header>
         {feedback ? <p className="ui-feedback-message">{feedback}</p> : null}
         {error ? <p className="ui-feedback-message settings-form-error">{error}</p> : null}
         <form
