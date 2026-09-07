@@ -137,6 +137,27 @@ button:focus {
   gap: 0.88rem;
 }
 
+.brand-logo-svg {
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 8px rgba(2, 132, 199, 0.3));
+}
+
+.brand-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.brand-cam-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-sky, #38bdf8);
+  letter-spacing: 0.05em;
+}
+
 .brand-pill {
   width: 0.95rem;
   height: 2.2rem;

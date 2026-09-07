@@ -23,6 +23,20 @@ const navIconByKey: Record<ViewKey, string> = {
   settings: 'settings',
 }
 
+function BrandLogoMark() {
+  return (
+    <svg className="brand-logo-svg" width="34" height="34" viewBox="0 0 54 54" fill="none" aria-hidden="true">
+      <g transform="translate(6, 2)">
+        <polygon points="23,0 34,5 26,13 15,8" fill="#38BDF8" opacity="0.95" />
+        <polygon points="8,18 24,14 19,34 3,30" fill="#38BDF8" fillOpacity="0.35" stroke="#38BDF8" strokeWidth="1.5" />
+        <polygon points="26,14 41,18 36,46 21,40" fill="#0284C7" fillOpacity="0.75" stroke="#7DD3FC" strokeWidth="1.5" />
+        <polygon points="12,38 22,35 34,52 18,55" fill="#0369A1" fillOpacity="0.9" />
+        <line x1="24" y1="14" x2="21" y2="40" stroke="#FFFFFF" strokeWidth="2" strokeOpacity="0.9" />
+      </g>
+    </svg>
+  )
+}
+
 function NavIcon({ name }: { name: string }) {
   if (name === 'grid') {
     return (
@@ -294,9 +308,11 @@ export function AppShell({
       <div className="workspace-grid">
         <aside className="side-nav glass-card" aria-label="Kontrol paneli menusu">
           <div className="brand sidebar-brand">
-            <span className="brand-pill" />
+            <BrandLogoMark />
             <div>
-              <strong>İlteriş Cam</strong>
+              <strong className="brand-title">
+                İLTERİŞ <span className="brand-cam-tag">CAM</span>
+              </strong>
               <p>Ust Duzey Is Platformu</p>
             </div>
           </div>

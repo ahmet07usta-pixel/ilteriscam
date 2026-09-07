@@ -148,17 +148,14 @@ export function LoginPage({ onLogin, initialNotice }: AuthPageProps) {
         <article className="glass-card login-card">
           <header className="login-head">
             <div className="logo-mark" aria-hidden="true">
-              <svg viewBox="0 0 80 80" fill="none">
-                <defs>
-                  <linearGradient id="glassLogoGradient" x1="8" y1="10" x2="72" y2="70" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#67B9EA" />
-                    <stop offset="1" stopColor="#2F5A87" />
-                  </linearGradient>
-                </defs>
-                <path d="M10 18c0-4.4 3.6-8 8-8h44c4.4 0 8 3.6 8 8v44c0 4.4-3.6 8-8 8H18c-4.4 0-8-3.6-8-8V18Z" stroke="url(#glassLogoGradient)" strokeWidth="4" />
-                <path d="M24 20h12c3.3 0 6 2.7 6 6v32c0 3.3-2.7 6-6 6H24c-3.3 0-6-2.7-6-6V26c0-3.3 2.7-6 6-6Z" fill="#69B7EA" fillOpacity="0.16" stroke="url(#glassLogoGradient)" strokeWidth="3" />
-                <path d="M44 20h12c3.3 0 6 2.7 6 6v32c0 3.3-2.7 6-6 6H44c-3.3 0-6-2.7-6-6V26c0-3.3 2.7-6 6-6Z" fill="#69B7EA" fillOpacity="0.1" stroke="url(#glassLogoGradient)" strokeWidth="3" />
-                <path d="M21 34h38M21 46h38" stroke="url(#glassLogoGradient)" strokeWidth="2.6" strokeLinecap="round" opacity="0.75" />
+              <svg viewBox="0 0 54 54" fill="none">
+                <g transform="translate(6, 2)">
+                  <polygon points="23,0 34,5 26,13 15,8" fill="#38BDF8" opacity="0.95" />
+                  <polygon points="8,18 24,14 19,34 3,30" fill="#38BDF8" fillOpacity="0.35" stroke="#38BDF8" strokeWidth="1.5" />
+                  <polygon points="26,14 41,18 36,46 21,40" fill="#0284C7" fillOpacity="0.75" stroke="#7DD3FC" strokeWidth="1.5" />
+                  <polygon points="12,38 22,35 34,52 18,55" fill="#0369A1" fillOpacity="0.9" />
+                  <line x1="24" y1="14" x2="21" y2="40" stroke="#FFFFFF" strokeWidth="2" strokeOpacity="0.9" />
+                </g>
               </svg>
             </div>
             <div>
